@@ -35,12 +35,20 @@ import {
 } from '@/components/ui/select';
 
 const transactionCategories = [
+  "Fiscalía",
+  "Capital Recuperado",
+  "Intereses Ganados",
+  "Préstamos Socios",
+  "Prestamos Candelaria",
+  "Capital Inicial",
+];
+
+const presetDescriptions = [
   "Ingreso por Fiscalía",
   "Abono o Recupercion de Capital",
   "Intereses Cobrados Al Mes",
   "Prestamos del Mes / Socios",
   "Prestamos / Candelaria",
-  "Capital Inicial",
 ];
 
 const formSchema = z.object({
@@ -196,20 +204,33 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
                         </FormItem>
                     )}
                     />
+                    
+                    <div className='space-y-2'>
+                        <FormLabel>Concepto / Descripción</FormLabel>
+                        <Select onValueChange={(value) => form.setValue('description', value)} defaultValue={form.getValues('description')}>
+                            <SelectTrigger>
+                            <SelectValue placeholder="Selecciona un concepto o escribe abajo" />
+                            </SelectTrigger>
+                            <SelectContent>
+                            {presetDescriptions.map(desc => (
+                                <SelectItem key={desc} value={desc}>{desc}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormField
+                            control={form.control}
+                            name="description"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormControl>
+                                <Input placeholder="o escribe una descripción personalizada" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                            )}
+                        />
+                    </div>
 
-                    <FormField
-                    control={form.control}
-                    name="description"
-                    render={({ field }) => (
-                        <FormItem>
-                        <FormLabel>Descripción</FormLabel>
-                        <FormControl>
-                            <Input placeholder="ej. Pago de préstamo" {...field} />
-                        </FormControl>
-                        <FormMessage />
-                        </FormItem>
-                    )}
-                    />
 
                     <FormField
                     control={form.control}
@@ -296,3 +317,5 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
     </Dialog>
   );
 }
+
+    
