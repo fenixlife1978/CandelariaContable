@@ -22,10 +22,10 @@ import {
 import { Button } from '@/components/ui/button';
 import { TransactionsTable } from './transactions-table';
 import type { Transaction, MonthlyClosure, CompanyProfile } from '@/lib/types';
-import { FileDown, Pencil, Banknote } from 'lucide-react';
+import { FileDown, LockOpen, Banknote } from 'lucide-react';
 import { Separator } from './ui/separator';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { collection, where, query, getDocs } from 'firebase/firestore';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, where, query, getDocs, doc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -45,6 +45,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   const [selectedYear, setSelectedYear] = useState<number>(getYear(today));
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isClosingMonth, setIsClosingMonth] = useState(false);
+  const [isReopeningMonth, setIsReopeningMonth] = useState(false);
   const { toast } = useToast();
 
   const reportRef = useRef<HTMLDivElement>(null);
@@ -72,58 +73,46 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
 
     const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
 
-    let capitalInicialValue = new Decimal(0);
-    
-    // Function to calculate balance for any given month before the selected one.
-    const getBalanceForMonth = (month: number, year: number) => {
-        // Find closure for the month before this one
-        const previousMonthOfGiven = subMonths(new Date(year, month), 1);
-        const prevYear = getYear(previousMonthOfGiven);
-        const prevMonth = getMonth(previousMonthOfGiven);
-        const closure = monthlyClosures.find(c => c.year === prevYear && c.month === prevMonth);
+    // Function to get the balance from the previous month.
+    const getPreviousMonthFinalBalance = (month: number, year: number) => {
+        const previousMonthDate = subMonths(new Date(year, month), 1);
+        const prevYear = getYear(previousMonthDate);
+        const prevMonth = getMonth(previousMonthDate);
 
+        // 1. Try to find a formal closure for the previous month.
+        const closure = monthlyClosures.find(c => c.year === prevYear && c.month === prevMonth);
         if (closure) {
             return new Decimal(closure.finalBalance);
         }
+
+        // 2. If no closure, calculate the balance dynamically.
+        const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear); // Recursive call
         
-        // If no closure, calculate historically from the start of time until this month starts.
-        const startOfGivenMonth = startOfMonth(new Date(year, month));
-        const historicalTransactions = allTransactions.filter(t => new Date(t.date) < startOfGivenMonth);
-        const historicalBalance = historicalTransactions.reduce((acc, t) => {
+        const transactionsForPrevMonth = allTransactions.filter(t => 
+            getMonth(t.date) === prevMonth && getYear(t.date) === prevYear
+        );
+
+        const finalBalance = transactionsForPrevMonth.reduce((acc, t) => {
             const amount = new Decimal(t.amount);
             return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
-        }, new Decimal(0));
-        return historicalBalance;
+        }, initialCapitalForPrevMonth);
+        
+        return finalBalance;
     };
     
-    const previousMonthDate = subMonths(new Date(selectedYear, selectedMonth), 1);
-    const previousMonthYear = getYear(previousMonthDate);
-    const previousMonthMonth = getMonth(previousMonthDate);
-
-    const previousMonthClosure = monthlyClosures.find(c => c.year === previousMonthYear && c.month === previousMonthMonth);
-
-    if (previousMonthClosure) {
-      capitalInicialValue = new Decimal(previousMonthClosure.finalBalance);
-    } else {
-      // If there is NO closure for the previous month, we must calculate its final balance.
-      // 1. Get the initial capital for the *previous* month.
-      const initialCapitalForPreviousMonth = getBalanceForMonth(previousMonthMonth, previousMonthYear);
-      
-      // 2. Get transactions for the *previous* month.
-      const transactionsForPreviousMonth = allTransactions.filter(t => 
-        getMonth(t.date) === previousMonthMonth && getYear(t.date) === previousMonthYear
-      );
-
-      // 3. Calculate final balance for the *previous* month.
-      const finalBalanceOfPreviousMonth = transactionsForPreviousMonth.reduce((acc, t) => {
-        const amount = new Decimal(t.amount);
-        return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
-      }, initialCapitalForPreviousMonth);
-
-      capitalInicialValue = finalBalanceOfPreviousMonth;
+    // For months before January 2024, the initial capital is 0, which is the base case for recursion.
+    const startOfTime = new Date(2024, 0); // Enero 2024
+    if (new Date(selectedYear, selectedMonth) < startOfTime) {
+      return { filteredTransactions, capitalInicial: 0, isClosed: isMonthClosed };
     }
+
+    const capitalInicialValue = getPreviousMonthFinalBalance(selectedMonth, selectedYear);
     
-    return { filteredTransactions: transactionsForSelectedMonth, capitalInicial: capitalInicialValue.toNumber(), isClosed: isMonthClosed };
+    return { 
+      filteredTransactions: transactionsForSelectedMonth, 
+      capitalInicial: capitalInicialValue.toNumber(), 
+      isClosed: isMonthClosed 
+    };
 }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
 
 
@@ -248,6 +237,28 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     }
   };
 
+  const handleReopenMonth = async () => {
+    setIsReopeningMonth(true);
+    const closureId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+    
+    try {
+        const docRef = doc(firestore, 'monthlyClosures', closureId);
+        await deleteDocumentNonBlocking(docRef);
+        toast({
+            title: 'Mes Reabierto',
+            description: `El mes de ${months[selectedMonth].label} ${selectedYear} ha sido reabierto para edición.`,
+        });
+    } catch (error) {
+        toast({
+            variant: 'destructive',
+            title: 'Error al reabrir el mes',
+            description: 'No se pudo eliminar el registro de cierre.',
+        });
+    } finally {
+        setIsReopeningMonth(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -293,9 +304,17 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             </Select>
           </div>
           <div className='flex gap-2'>
-            <Button onClick={handleCloseMonth} disabled={isClosingMonth || isClosed} variant="secondary">
-              {isClosingMonth ? 'Cerrando...' : (isClosed ? 'Mes Cerrado' : 'Cierre del Mes')}
-            </Button>
+            {isClosed ? (
+                <Button onClick={handleReopenMonth} disabled={isReopeningMonth} variant="destructive">
+                    <LockOpen className="mr-2 h-4 w-4" />
+                    {isReopeningMonth ? 'Reabriendo...' : 'Reabrir Mes'}
+                </Button>
+            ) : (
+                <Button onClick={handleCloseMonth} disabled={isClosingMonth || isClosed} variant="secondary">
+                    {isClosingMonth ? 'Cerrando...' : 'Cierre del Mes'}
+                </Button>
+            )}
+
             <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="bg-accent text-accent-foreground hover:bg-accent/90">
               <FileDown className="mr-2 h-4 w-4" />
               {isGeneratingPdf ? 'Generando...' : 'Exportar a PDF'}
@@ -385,3 +404,5 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     </Card>
   );
 }
+
+    
