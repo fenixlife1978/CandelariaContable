@@ -15,7 +15,7 @@ import { TransactionsTable } from './transactions-table';
 import { AiSummaryModal } from './ai-summary-modal';
 import type { Income, Expense } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc } from 'firebase/firestore';
 import { Reports } from './reports';
 
@@ -58,6 +58,19 @@ export default function Dashboard() {
       addDocumentNonBlocking(incomesCollection, data);
     } else {
       addDocumentNonBlocking(expensesCollection, data);
+    }
+  };
+
+  const updateTransaction = (transaction: Transaction) => {
+    const { id, type, ...dataToUpdate } = transaction;
+    const data = {
+        ...dataToUpdate,
+        date: transaction.date.toISOString()
+    };
+    if (type === 'income') {
+        updateDocumentNonBlocking(doc(firestore, 'incomes', id), data);
+    } else {
+        updateDocumentNonBlocking(doc(firestore, 'expenses', id), data);
     }
   };
   
@@ -132,7 +145,7 @@ export default function Dashboard() {
               <TransactionForm onSubmit={addTransaction} />
             </div>
             <div className="lg:col-span-2">
-              <TransactionsTable transactions={transactions} onDelete={deleteTransaction} formatCurrency={formatCurrency} isLoading={isLoading} />
+              <TransactionsTable transactions={transactions} onDelete={deleteTransaction} onUpdate={updateTransaction} formatCurrency={formatCurrency} isLoading={isLoading} />
             </div>
           </div>
         </TabsContent>

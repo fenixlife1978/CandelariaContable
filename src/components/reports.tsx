@@ -22,7 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { TransactionsTable } from './transactions-table';
 import type { Transaction } from '@/lib/types';
-import { FileDown } from 'lucide-react';
+import { FileDown, Pencil } from 'lucide-react';
 import { Separator } from './ui/separator';
 
 type ReportsProps = {
@@ -220,6 +220,7 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
           <TransactionsTable
             transactions={filteredTransactions}
             onDelete={() => {}} 
+            onUpdate={() => {}}
             formatCurrency={formatCurrency}
             isLoading={isLoading}
           />

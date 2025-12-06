@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -17,7 +18,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2, Loader } from 'lucide-react';
+import { Trash2, Loader, Pencil } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,15 +34,19 @@ import { cn } from '@/lib/utils';
 import type { Transaction } from '@/lib/types';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { EditTransactionModal } from './edit-transaction-modal';
 
 type TransactionsTableProps = {
   transactions: Transaction[];
   onDelete: (id: string, type: 'income' | 'expense') => void;
+  onUpdate: (transaction: Transaction) => void;
   formatCurrency: (amount: number) => string;
   isLoading: boolean;
 };
 
-export function TransactionsTable({ transactions, onDelete, formatCurrency, isLoading }: TransactionsTableProps) {
+export function TransactionsTable({ transactions, onDelete, onUpdate, formatCurrency, isLoading }: TransactionsTableProps) {
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
+
   return (
     <Card>
       <CardHeader>
@@ -90,11 +95,15 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency, isLo
                     </Badge>
                   </TableCell>
                   <TableCell
-                    className={cn("text-right font-medium", transaction.type === 'expense' && 'text-destructive')}
+                    className={cn("text-right font-medium", transaction.type === 'expense' && 'text-red-600')}
                   >
                     {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
                   </TableCell>
                   <TableCell className="text-right">
+                    <Button variant="ghost" size="icon" onClick={() => setEditingTransaction(transaction)}>
+                      <Pencil className="h-4 w-4" />
+                      <span className="sr-only">Editar transacción</span>
+                    </Button>
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="icon">
@@ -126,6 +135,14 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency, isLo
             </TableBody>
           </Table>
         </div>
+        {editingTransaction && (
+          <EditTransactionModal 
+            transaction={editingTransaction}
+            onUpdate={onUpdate}
+            isOpen={!!editingTransaction}
+            onClose={() => setEditingTransaction(null)}
+          />
+        )}
       </CardContent>
     </Card>
   );

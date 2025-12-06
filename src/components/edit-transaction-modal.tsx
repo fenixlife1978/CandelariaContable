@@ -1,0 +1,288 @@
+'use client';
+
+import { z } from 'zod';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { format, getDay, getMonth, getYear } from 'date-fns';
+import { es } from 'date-fns/locale';
+import { PlusCircle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import type { Transaction } from '@/lib/types';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
+const transactionCategories = [
+  "Fiscalía",
+  "Capital Recuperado",
+  "Intereses Ganados",
+  "Préstamos Socios",
+  "Prestamos Candelaria",
+];
+
+const formSchema = z.object({
+  type: z.enum(['income', 'expense']),
+  amount: z.coerce.number().min(0.01, 'El monto debe ser mayor que 0'),
+  description: z
+    .string()
+    .min(2, 'La descripción debe tener al menos 2 caracteres')
+    .max(100),
+  category: z.string().min(1, "Debes seleccionar una categoría"),
+  day: z.coerce.number().int().min(1).max(31),
+  month: z.coerce.number().int().min(1).max(12),
+  year: z.coerce.number().int().min(2023).max(new Date().getFullYear() + 1),
+}).refine(data => {
+    try {
+        const date = new Date(data.year, data.month - 1, data.day);
+        return date.getFullYear() === data.year && date.getMonth() === data.month - 1 && date.getDate() === data.day;
+    } catch {
+        return false;
+    }
+}, { message: "La fecha no es válida", path: ["day"] });
+
+
+type EditTransactionModalProps = {
+  transaction: Transaction;
+  onUpdate: (transaction: Transaction) => void;
+  isOpen: boolean;
+  onClose: () => void;
+};
+
+export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }: EditTransactionModalProps) {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      type: transaction.type,
+      amount: transaction.amount,
+      description: transaction.description,
+      category: transaction.category,
+      day: getDay(transaction.date),
+      month: getMonth(transaction.date) + 1,
+      year: getYear(transaction.date),
+    },
+  });
+
+  const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    const date = new Date(values.year, values.month - 1, values.day);
+    onUpdate({
+        ...transaction,
+        type: values.type,
+        amount: values.amount,
+        description: values.description,
+        category: values.category,
+        date: date
+    });
+    onClose();
+  };
+
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 2023 + 2 }, (_, i) => 2023 + i).reverse();
+  const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: format(new Date(2000, i, 1), 'MMMM', { locale: es }) }));
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+        <DialogContent>
+            <DialogHeader>
+                <DialogTitle>Editar Transacción</DialogTitle>
+                <DialogDescription>
+                    Actualiza los detalles de tu transacción.
+                </DialogDescription>
+            </DialogHeader>
+            <Form {...form}>
+                <form
+                    onSubmit={form.handleSubmit(handleSubmit)}
+                    className="space-y-6"
+                >
+                    <FormField
+                    control={form.control}
+                    name="type"
+                    render={({ field }) => (
+                        <FormItem className="space-y-3">
+                        <FormLabel>Tipo</FormLabel>
+                        <FormControl>
+                            <RadioGroup
+                            onValueChange={field.onChange}
+                            defaultValue={field.value}
+                            className="flex gap-4"
+                            >
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                                <FormControl>
+                                <RadioGroupItem value="income" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Ingreso</FormLabel>
+                            </FormItem>
+                            <FormItem className="flex items-center space-x-2 space-y-0">
+                                <FormControl>
+                                <RadioGroupItem value="expense" />
+                                </FormControl>
+                                <FormLabel className="font-normal">Egreso</FormLabel>
+                            </FormItem>
+                            </RadioGroup>
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+
+                    <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Monto</FormLabel>
+                        <FormControl>
+                            <Input
+                            type="number"
+                            placeholder="0.00"
+                            {...field}
+                            onChange={(e) => field.onChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                            value={field.value ?? ''}
+                            step="0.01"
+                            />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+
+                    <FormField
+                    control={form.control}
+                    name="description"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Descripción</FormLabel>
+                        <FormControl>
+                            <Input placeholder="ej. Pago de préstamo" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+
+                    <FormField
+                    control={form.control}
+                    name="category"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Categoría</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Selecciona una categoría" />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {transactionCategories.map(category => (
+                                <SelectItem key={category} value={category}>{category}</SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+
+                    <FormItem>
+                    <FormLabel>Fecha</FormLabel>
+                    <div className="grid grid-cols-3 gap-2">
+                        <FormField
+                        control={form.control}
+                        name="day"
+                        render={({ field }) => (
+                            <FormItem>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Día" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {days.map((day) => (
+                                    <SelectItem key={day} value={String(day)}>{day}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="month"
+                        render={({ field }) => (
+                            <FormItem>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Mes" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {months.map((month) => (
+                                    <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            </FormItem>
+                        )}
+                        />
+                        <FormField
+                        control={form.control}
+                        name="year"
+                        render={({ field }) => (
+                            <FormItem>
+                            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
+                                <FormControl>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Año" />
+                                </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                {years.map((year) => (
+                                    <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                                ))}
+                                </SelectContent>
+                            </Select>
+                            </FormItem>
+                        )}
+                        />
+                    </div>
+                    <FormMessage>{form.formState.errors.day?.message}</FormMessage>
+                    </FormItem>
+                    
+                    <DialogFooter>
+                        <Button
+                            type="submit"
+                            className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                        >
+                            <PlusCircle className="mr-2 h-4 w-4" /> Actualizar Transacción
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </Form>
+        </DialogContent>
+    </Dialog>
+  );
+}
