@@ -90,15 +90,15 @@ service cloud.firestore {
     }
     
     /**
-     * @description Allows any authenticated user to manage the company profile.
+     * @description Allows any user to read the company profile, but only authenticated users to write.
      * @path /companyProfile/{profileId}
+     * @allow An unauthenticated user `(auth: null)` can read the company profile for the login page.
      * @allow An authenticated user `(auth.uid: 'user_789')` can create and update the company profile.
-     * @deny An unauthenticated user `(auth: null)` is denied from reading or writing the company profile.
-     * @principle Enforces a single security boundary: the user must be signed in.
-     * @comment Force re-deploy to fix permissions issue. Timestamp: 1723755338
+     * @deny An unauthenticated user `(auth: null)` is denied from writing the company profile.
      */
     match /companyProfile/{profileId} {
-      allow read, write: if isSignedIn();
+      allow read: if true;
+      allow write: if isSignedIn();
     }
   }
 }

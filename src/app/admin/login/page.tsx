@@ -20,11 +20,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { useAuth, initiateEmailSignIn, useUser } from '@/firebase';
+import { useAuth, initiateEmailSignIn, useUser, useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Banknote } from 'lucide-react';
+import { CompanyProfile } from '@/lib/types';
+import { doc } from 'firebase/firestore';
+import Image from 'next/image';
 
 const formSchema = z.object({
   email: z.string().email({
@@ -37,10 +40,14 @@ const formSchema = z.object({
 
 export default function LoginPage() {
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const companyProfileRef = useMemoFirebase(() => firestore ? doc(firestore, 'companyProfile', 'main') : null, [firestore]);
+  const { data: companyProfile, isLoading: isProfileLoading } = useDoc<CompanyProfile>(companyProfileRef);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -75,7 +82,7 @@ export default function LoginPage() {
     }
   }
   
-  if (isUserLoading || user) {
+  if (isUserLoading || user || isProfileLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg">Cargando...</div>
@@ -87,10 +94,14 @@ export default function LoginPage() {
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
        <div className="flex items-center gap-3 mb-6">
             <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden">
-                <Banknote className="h-7 w-7 text-primary-foreground" />
+                {companyProfile?.logo ? (
+                    <Image src={companyProfile.logo} alt="Logo de la empresa" width={48} height={48} className="object-cover" />
+                ) : (
+                    <Banknote className="h-7 w-7 text-primary-foreground" />
+                )}
             </div>
-            <h1 className="text-3xl font-bold text-foreground font-headline">
-              Contabilidad LoanStar
+            <h1 className="text-2xl font-bold text-foreground font-headline text-center">
+              Contabilidad Asoc. Coop. Trans. La Candelaria
             </h1>
         </div>
       <Card className="w-full max-w-sm">
