@@ -8,6 +8,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { TrendingUp, TrendingDown, Scale } from 'lucide-react';
 import { TransactionForm } from './transaction-form';
 import { TransactionsTable } from './transactions-table';
@@ -16,6 +17,7 @@ import type { Income, Expense } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc } from 'firebase/firestore';
+import { Reports } from './reports';
 
 export default function Dashboard() {
   const firestore = useFirestore();
@@ -73,8 +75,8 @@ export default function Dashboard() {
     }).format(amount);
   };
   
-  const incomesForSummary: Income[] = useMemo(() => incomesData?.map(i => ({ date: i.date, amount: i.amount, description: i.description })) || [], [incomesData]);
-  const expensesForSummary: Expense[] = useMemo(() => expensesData?.map(e => ({ date: e.date, amount: e.amount, description: e.description })) || [], [expensesData]);
+  const incomesForSummary: Income[] = useMemo(() => incomesData?.map(i => ({ date: i.date, amount: i.amount, description: i.description, id: i.id })) || [], [incomesData]);
+  const expensesForSummary: Expense[] = useMemo(() => expensesData?.map(e => ({ date: e.date, amount: e.amount, description: e.description, id: e.id })) || [], [expensesData]);
 
   const isLoading = incomesLoading || expensesLoading;
 
@@ -118,14 +120,29 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1">
-          <TransactionForm onSubmit={addTransaction} />
-        </div>
-        <div className="lg:col-span-2">
-          <TransactionsTable transactions={transactions} onDelete={deleteTransaction} formatCurrency={formatCurrency} isLoading={isLoading} />
-        </div>
-      </div>
+      <Tabs defaultValue="transactions">
+        <TabsList>
+          <TabsTrigger value="transactions">Transacciones</TabsTrigger>
+          <TabsTrigger value="reports">Reportes</TabsTrigger>
+        </TabsList>
+        <TabsContent value="transactions" className="mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-1">
+              <TransactionForm onSubmit={addTransaction} />
+            </div>
+            <div className="lg:col-span-2">
+              <TransactionsTable transactions={transactions} onDelete={deleteTransaction} formatCurrency={formatCurrency} isLoading={isLoading} />
+            </div>
+          </div>
+        </TabsContent>
+        <TabsContent value="reports" className="mt-6">
+          <Reports 
+            allTransactions={transactions} 
+            formatCurrency={formatCurrency} 
+            isLoading={isLoading} 
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

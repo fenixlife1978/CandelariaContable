@@ -1,0 +1,180 @@
+'use client';
+
+import { useState, useMemo, useRef } from 'react';
+import { format, getMonth, getYear } from 'date-fns';
+import { es } from 'date-fns/locale';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { TransactionsTable } from './transactions-table';
+import type { Transaction } from '@/lib/types';
+import { FileDown } from 'lucide-react';
+
+type ReportsProps = {
+  allTransactions: Transaction[];
+  formatCurrency: (amount: number) => string;
+  isLoading: boolean;
+};
+
+export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsProps) {
+  const today = new Date();
+  const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth());
+  const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear());
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const reportRef = useRef<HTMLDivElement>(null);
+
+  const years = useMemo(() => {
+    const allYears = allTransactions.map(t => getYear(t.date));
+    const uniqueYears = [...new Set(allYears), today.getFullYear()];
+    return uniqueYears.sort((a, b) => b - a);
+  }, [allTransactions, today]);
+
+  const months = Array.from({ length: 12 }, (_, i) => ({
+    value: i,
+    label: format(new Date(2000, i, 1), 'LLLL', { locale: es }),
+  }));
+
+  const filteredTransactions = useMemo(() => {
+    return allTransactions.filter(transaction => {
+      return (
+        getMonth(transaction.date) === selectedMonth &&
+        getYear(transaction.date) === selectedYear
+      );
+    });
+  }, [allTransactions, selectedMonth, selectedYear]);
+
+  const { totalIncome, totalExpenses, balance } = useMemo(() => {
+    const income = filteredTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+    const expenses = filteredTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+    return {
+      totalIncome: income,
+      totalExpenses: expenses,
+      balance: income - expenses,
+    };
+  }, [filteredTransactions]);
+
+  const handleGeneratePdf = async () => {
+    if (!reportRef.current) return;
+    setIsGeneratingPdf(true);
+    
+    try {
+      const canvas = await html2canvas(reportRef.current, {
+        scale: 2, 
+        useCORS: true,
+        backgroundColor: null
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'px',
+        format: [canvas.width, canvas.height],
+      });
+
+      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      pdf.save(`reporte-${months[selectedMonth].label}-${selectedYear}.pdf`);
+    } catch(error) {
+      console.error("Error al generar el PDF:", error)
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-headline">Reportes Financieros</CardTitle>
+        <CardDescription>
+          Consulta la actividad financiera por períodos específicos.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <Select
+              value={String(selectedMonth)}
+              onValueChange={value => setSelectedMonth(Number(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Mes" />
+              </SelectTrigger>
+              <SelectContent>
+                {months.map(month => (
+                  <SelectItem key={month.value} value={String(month.value)}>
+                    {month.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1">
+            <Select
+              value={String(selectedYear)}
+              onValueChange={value => setSelectedYear(Number(value))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Año" />
+              </SelectTrigger>
+              <SelectContent>
+                {years.map(year => (
+                  <SelectItem key={year} value={String(year)}>
+                    {year}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="bg-accent text-accent-foreground hover:bg-accent/90">
+            <FileDown className="mr-2 h-4 w-4" />
+            {isGeneratingPdf ? 'Generando...' : 'Exportar a PDF'}
+          </Button>
+        </div>
+
+        <div ref={reportRef} className="p-4 bg-background rounded-lg">
+          <h3 className="text-xl font-bold font-headline mb-4 text-center">
+            Reporte de {months[selectedMonth].label} {selectedYear}
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 text-center">
+            <div className="p-4 bg-secondary rounded-lg">
+              <p className="text-sm text-muted-foreground">Ingresos del Mes</p>
+              <p className="text-lg font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+            </div>
+            <div className="p-4 bg-secondary rounded-lg">
+              <p className="text-sm text-muted-foreground">Gastos del Mes</p>
+              <p className="text-lg font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+            </div>
+            <div className="p-4 bg-secondary rounded-lg">
+              <p className="text-sm text-muted-foreground">Balance del Mes</p>
+              <p className="text-lg font-bold">{formatCurrency(balance)}</p>
+            </div>
+          </div>
+
+          <TransactionsTable
+            transactions={filteredTransactions}
+            onDelete={() => {}} 
+            formatCurrency={formatCurrency}
+            isLoading={isLoading}
+          />
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
