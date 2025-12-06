@@ -72,40 +72,24 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
 
     const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
 
+    const previousMonthDate = subMonths(new Date(selectedYear, selectedMonth), 1);
+    const previousMonthYear = getYear(previousMonthDate);
+    const previousMonthMonth = getMonth(previousMonthDate);
+
+    const previousMonthClosure = monthlyClosures.find(c => c.year === previousMonthYear && c.month === previousMonthMonth);
+
     let capitalInicialValue = new Decimal(0);
-
-    // Special logic for January 2025 and onwards
-    if (selectedYear >= 2025 && selectedMonth === 0) { // January
-        const initialCapitalTransaction = allTransactions.find(t => 
-            getYear(t.date) === selectedYear &&
-            getMonth(t.date) === 0 &&
-            t.type === 'income' &&
-            t.category === 'Capital Inicial'
-        );
-        if (initialCapitalTransaction) {
-            capitalInicialValue = new Decimal(initialCapitalTransaction.amount);
-        }
-        // If not found, it remains 0, as per the rule of not inheriting from Dec 2024
+    if (previousMonthClosure) {
+      capitalInicialValue = new Decimal(previousMonthClosure.finalBalance);
     } else {
-        // Standard logic for all other months
-        const previousMonthDate = subMonths(new Date(selectedYear, selectedMonth), 1);
-        const previousMonthYear = getYear(previousMonthDate);
-        const previousMonthMonth = getMonth(previousMonthDate);
-        
-        const previousMonthClosure = monthlyClosures.find(c => c.year === previousMonthYear && c.month === previousMonthMonth);
-
-        if (previousMonthClosure) {
-            capitalInicialValue = new Decimal(previousMonthClosure.finalBalance);
-        } else {
-            const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
-            const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
-            
-            const historicalBalance = transactionsBefore.reduce((acc, t) => {
-                const amount = new Decimal(t.amount);
-                return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
-            }, new Decimal(0));
-            capitalInicialValue = historicalBalance;
-        }
+      const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
+      const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
+      
+      const historicalBalance = transactionsBefore.reduce((acc, t) => {
+        const amount = new Decimal(t.amount);
+        return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
+      }, new Decimal(0));
+      capitalInicialValue = historicalBalance;
     }
     
     return { filteredTransactions: transactionsForSelectedMonth, capitalInicial: capitalInicialValue.toNumber(), isClosed: isMonthClosed };
@@ -370,6 +354,3 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     </Card>
   );
 }
-    
-
-    
