@@ -65,50 +65,62 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   }));
 
   const { filteredTransactions, capitalInicial, isClosed } = useMemo(() => {
-    const previousMonthDate = subMonths(new Date(selectedYear, selectedMonth), 1);
-    const previousMonthYear = getYear(previousMonthDate);
-    const previousMonthMonth = getMonth(previousMonthDate);
-    
-    const previousMonthClosure = monthlyClosures.find(c => c.year === previousMonthYear && c.month === previousMonthMonth);
-    
-    let capitalInicialValue = new Decimal(previousMonthClosure?.finalBalance ?? 0);
-
     const transactionsForSelectedMonth = allTransactions.filter(transaction =>
-      getMonth(transaction.date) === selectedMonth &&
-      getYear(transaction.date) === selectedYear
+        getMonth(transaction.date) === selectedMonth &&
+        getYear(transaction.date) === selectedYear
     );
-    
-    if (!previousMonthClosure) {
-        const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
-        const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
+
+    let capitalInicialValue = new Decimal(0);
+    const isJanuary2025OrLater = selectedYear >= 2025 && selectedMonth === 0;
+
+    // Special logic for January 2025 and onwards
+    if (isJanuary2025OrLater) {
+        const initialCapitalTransaction = transactionsForSelectedMonth.find(
+            t => t.category === "Capital Inicial" && t.type === 'income'
+        );
+        if (initialCapitalTransaction) {
+            capitalInicialValue = new Decimal(initialCapitalTransaction.amount);
+        }
+        // If not found, it remains 0, as we don't look at the previous month.
+    } else {
+        // Standard logic for all other months
+        const previousMonthDate = subMonths(new Date(selectedYear, selectedMonth), 1);
+        const previousMonthYear = getYear(previousMonthDate);
+        const previousMonthMonth = getMonth(previousMonthDate);
         
-        if (transactionsBefore.length > 0) {
-            const historicalBalance = transactionsBefore.reduce((acc, t) => {
-                const amount = new Decimal(t.amount);
-                return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
-            }, new Decimal(0));
-            capitalInicialValue = historicalBalance;
+        const previousMonthClosure = monthlyClosures.find(c => c.year === previousMonthYear && c.month === previousMonthMonth);
+
+        if (previousMonthClosure) {
+            capitalInicialValue = new Decimal(previousMonthClosure.finalBalance);
         } else {
-             const initialCapitalTransaction = transactionsForSelectedMonth.find(
-                t => t.category === "Capital Inicial" && t.type === 'income'
-            );
-            if (initialCapitalTransaction) {
-                capitalInicialValue = new Decimal(initialCapitalTransaction.amount);
+            const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
+            const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
+            
+            if (transactionsBefore.length > 0) {
+                const historicalBalance = transactionsBefore.reduce((acc, t) => {
+                    const amount = new Decimal(t.amount);
+                    return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
+                }, new Decimal(0));
+                capitalInicialValue = historicalBalance;
+            } else {
+                const initialCapitalTransaction = transactionsForSelectedMonth.find(
+                    t => t.category === "Capital Inicial" && t.type === 'income'
+                );
+                if (initialCapitalTransaction) {
+                    capitalInicialValue = new Decimal(initialCapitalTransaction.amount);
+                }
             }
         }
     }
 
     const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
 
+    // Filter out the "Capital Inicial" transaction from the list if it was used to set the initial balance.
     const filtered = transactionsForSelectedMonth.filter(t => {
-        if (!previousMonthClosure) {
-             const isInitialCapital = t.category === 'Capital Inicial' && t.type === 'income';
-             const hasTransactionsBefore = allTransactions.some(tx => new Date(tx.date) < startOfMonth(new Date(selectedYear, selectedMonth)));
-             if (isInitialCapital && !hasTransactionsBefore) {
-                 return false;
-             }
-        }
-        return true;
+        const isInitialCapitalForJan2025 = isJanuary2025OrLater && t.category === 'Capital Inicial' && t.type === 'income';
+        const isInitialCapitalForLegacy = !isJanuary2025OrLater && t.category === 'Capital Inicial' && t.type === 'income' && !allTransactions.some(tx => new Date(tx.date) < startOfMonth(new Date(selectedYear, selectedMonth)));
+        
+        return !(isInitialCapitalForJan2025 || isInitialCapitalForLegacy);
     });
     
     return { 
@@ -117,6 +129,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       isClosed: isMonthClosed 
     };
 }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
+
 
 
   const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
@@ -375,7 +388,8 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       </CardContent>
     </Card>
   );
-
+}
     
+
 
 
