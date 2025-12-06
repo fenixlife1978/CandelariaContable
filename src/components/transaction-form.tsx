@@ -50,21 +50,12 @@ const formSchema = z.object({
     .min(2, 'La descripción debe tener al menos 2 caracteres')
     .max(100),
   category: z.string().min(1, "Debes seleccionar una categoría"),
-  day: z.coerce.number().int().min(1).max(31),
   month: z.coerce.number().int().min(1).max(12),
   year: z.coerce.number().int().min(2023).max(new Date().getFullYear() + 1),
-}).refine(data => {
-    try {
-        const date = new Date(data.year, data.month - 1, data.day);
-        return date.getFullYear() === data.year && date.getMonth() === data.month - 1 && date.getDate() === data.day;
-    } catch {
-        return false;
-    }
-}, { message: "La fecha no es válida", path: ["day"] });
+});
 
 
 type TransactionFormValues = Omit<Transaction, 'id' | 'date'> & {
-    day: number;
     month: number;
     year: number;
 }
@@ -82,14 +73,13 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       amount: undefined,
       description: '',
       category: '',
-      day: today.getDate(),
       month: today.getMonth() + 1,
       year: today.getFullYear(),
     },
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    const date = new Date(values.year, values.month - 1, values.day);
+    const date = new Date(values.year, values.month - 1, 1);
     onSubmit({
         type: values.type,
         amount: values.amount,
@@ -102,7 +92,6 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       amount: undefined,
       description: '',
       category: '',
-      day: today.getDate(),
       month: today.getMonth() + 1,
       year: today.getFullYear(),
     });
@@ -111,7 +100,6 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 2023 + 2 }, (_, i) => 2023 + i).reverse();
   const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: format(new Date(2000, i, 1), 'MMMM', { locale: es }) }));
-  const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
     <Card>
@@ -215,27 +203,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
 
             <FormItem>
               <FormLabel>Fecha</FormLabel>
-              <div className="grid grid-cols-3 gap-2">
-                <FormField
-                  control={form.control}
-                  name="day"
-                  render={({ field }) => (
-                    <FormItem>
-                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Día" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {days.map((day) => (
-                            <SelectItem key={day} value={String(day)}>{day}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormItem>
-                  )}
-                />
+              <div className="grid grid-cols-2 gap-2">
                 <FormField
                   control={form.control}
                   name="month"
@@ -277,7 +245,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                   )}
                 />
               </div>
-               <FormMessage>{form.formState.errors.day?.message}</FormMessage>
+               <FormMessage>{form.formState.errors.month?.message}</FormMessage>
             </FormItem>
             
 

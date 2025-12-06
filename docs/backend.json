@@ -102,6 +102,70 @@
         "summary",
         "suggestions"
       ]
+    },
+    "MonthlyClosure": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "MonthlyClosure",
+      "type": "object",
+      "description": "Stores the financial summary of a closed month.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the closure record (e.g., '2024-06')."
+        },
+        "month": {
+          "type": "number",
+          "description": "The month of the closure (0-11)."
+        },
+        "year": {
+          "type": "number",
+          "description": "The year of the closure."
+        },
+        "initialBalance": {
+          "type": "number",
+          "description": "The starting capital for the month."
+        },
+        "totalIncome": {
+          "type": "number",
+          "description": "Total income for the month."
+        },
+        "totalExpenses": {
+          "type": "number",
+          "description": "Total expenses for the month."
+        },
+        "finalBalance": {
+          "type": "number",
+          "description": "The closing capital for the month."
+        },
+        "categoryTotals": {
+          "type": "object",
+          "description": "A map of totals for each transaction category.",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "income": { "type": "number" },
+              "expense": { "type": "number" }
+            },
+            "required": ["income", "expense"]
+          }
+        },
+        "closedAt": {
+          "type": "string",
+          "description": "The timestamp when the month was closed.",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "id",
+        "month",
+        "year",
+        "initialBalance",
+        "totalIncome",
+        "totalExpenses",
+        "finalBalance",
+        "categoryTotals",
+        "closedAt"
+      ]
     }
   },
   "auth": {
@@ -156,6 +220,22 @@
             {
               "name": "loanSummaryId",
               "description": "Unique identifier for the loan summary."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/monthlyClosures/{closureId}",
+        "definition": {
+          "entityName": "MonthlyClosure",
+          "schema": {
+            "$ref": "#/backend/entities/MonthlyClosure"
+          },
+          "description": "Stores financial summaries for each closed month. Authenticated users have full read/write access.",
+          "params": [
+            {
+              "name": "closureId",
+              "description": "Unique identifier for the monthly closure."
             }
           ]
         }

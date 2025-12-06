@@ -13,7 +13,7 @@ import { TrendingUp, TrendingDown, Scale } from 'lucide-react';
 import { TransactionForm } from './transaction-form';
 import { TransactionsTable } from './transactions-table';
 import { AiSummaryModal } from './ai-summary-modal';
-import type { Income, Expense } from '@/lib/types';
+import type { Income, Expense, MonthlyClosure } from '@/lib/types';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc } from 'firebase/firestore';
@@ -24,9 +24,11 @@ export default function Dashboard() {
 
   const incomesCollection = useMemoFirebase(() => collection(firestore, 'incomes'), [firestore]);
   const expensesCollection = useMemoFirebase(() => collection(firestore, 'expenses'), [firestore]);
+  const monthlyClosuresCollection = useMemoFirebase(() => collection(firestore, 'monthlyClosures'), [firestore]);
   
   const { data: incomesData, isLoading: incomesLoading } = useCollection<Income>(incomesCollection);
   const { data: expensesData, isLoading: expensesLoading } = useCollection<Expense>(expensesCollection);
+  const { data: monthlyClosuresData, isLoading: monthlyClosuresLoading } = useCollection<MonthlyClosure>(monthlyClosuresCollection);
 
   const transactions: Transaction[] = useMemo(() => {
     const combined: Transaction[] = [];
@@ -92,7 +94,7 @@ export default function Dashboard() {
   const incomesForSummary: Income[] = useMemo(() => incomesData?.map(i => ({ ...i, id: i.id })) || [], [incomesData]);
   const expensesForSummary: Expense[] = useMemo(() => expensesData?.map(e => ({ ...e, id: e.id })) || [], [expensesData]);
 
-  const isLoading = incomesLoading || expensesLoading;
+  const isLoading = incomesLoading || expensesLoading || monthlyClosuresLoading;
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
@@ -152,6 +154,7 @@ export default function Dashboard() {
         <TabsContent value="reports" className="mt-6">
           <Reports 
             allTransactions={transactions} 
+            monthlyClosures={monthlyClosuresData || []}
             formatCurrency={formatCurrency} 
             isLoading={isLoading} 
           />

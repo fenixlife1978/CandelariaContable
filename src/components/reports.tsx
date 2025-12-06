@@ -21,23 +21,32 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { TransactionsTable } from './transactions-table';
-import type { Transaction } from '@/lib/types';
+import type { Transaction, MonthlyClosure } from '@/lib/types';
 import { FileDown, Pencil } from 'lucide-react';
 import { Separator } from './ui/separator';
+import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, where, query, getDocs } from 'firebase/firestore';
+import { useFirestore, useMemoFirebase } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 
 type ReportsProps = {
   allTransactions: Transaction[];
+  monthlyClosures: MonthlyClosure[];
   formatCurrency: (amount: number) => string;
   isLoading: boolean;
 };
 
-export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsProps) {
+export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLoading }: ReportsProps) {
   const today = new Date();
   const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth());
   const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear());
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isClosingMonth, setIsClosingMonth] = useState(false);
+  const { toast } = useToast();
 
   const reportRef = useRef<HTMLDivElement>(null);
+  const firestore = useFirestore();
+  const monthlyClosuresCollection = useMemoFirebase(() => collection(firestore, 'monthlyClosures'), [firestore]);
 
   const years = useMemo(() => {
     const allYears = allTransactions.map(t => getYear(t.date));
@@ -50,13 +59,24 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
     label: format(new Date(2000, i, 1), 'LLLL', { locale: es }),
   }));
 
-  const { filteredTransactions, capitalInicial } = useMemo(() => {
-    const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
+  const { filteredTransactions, capitalInicial, isClosed } = useMemo(() => {
+    const previousMonthDate = subMonths(new Date(selectedYear, selectedMonth), 1);
+    const previousMonthYear = getYear(previousMonthDate);
+    const previousMonthMonth = getMonth(previousMonthDate);
+
+    const previousMonthClosure = monthlyClosures.find(c => c.year === previousMonthYear && c.month === previousMonthMonth);
+    const capitalFromClosure = previousMonthClosure?.finalBalance ?? 0;
+
+    let capitalFromTransactions = 0;
+    if (!previousMonthClosure) {
+        const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
+        const transactionsBefore = allTransactions.filter(t => t.date < startOfSelectedMonth);
+        capitalFromTransactions = transactionsBefore.reduce((acc, t) => {
+            return acc + (t.type === 'income' ? t.amount : -t.amount);
+        }, 0);
+    }
     
-    const transactionsBefore = allTransactions.filter(t => t.date < startOfSelectedMonth);
-    const capitalInicial = transactionsBefore.reduce((acc, t) => {
-        return acc + (t.type === 'income' ? t.amount : -t.amount);
-    }, 0);
+    const capitalInicial = previousMonthClosure ? capitalFromClosure : capitalFromTransactions;
 
     const filtered = allTransactions.filter(transaction => {
       return (
@@ -65,8 +85,10 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
       );
     });
 
-    return { filteredTransactions: filtered, capitalInicial };
-  }, [allTransactions, selectedMonth, selectedYear]);
+    const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
+
+    return { filteredTransactions: filtered, capitalInicial, isClosed: isMonthClosed };
+  }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
 
   const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
     const income = filteredTransactions
@@ -125,6 +147,54 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
     }
   };
 
+  const handleCloseMonth = async () => {
+    setIsClosingMonth(true);
+
+    const q = query(
+      monthlyClosuresCollection,
+      where('year', '==', selectedYear),
+      where('month', '==', selectedMonth)
+    );
+    const existingClosure = await getDocs(q);
+
+    if (!existingClosure.empty) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Este mes ya ha sido cerrado.',
+      });
+      setIsClosingMonth(false);
+      return;
+    }
+
+    const closureData: Omit<MonthlyClosure, 'id'> = {
+      month: selectedMonth,
+      year: selectedYear,
+      initialBalance: capitalInicial,
+      totalIncome,
+      totalExpenses,
+      finalBalance: capitalFinal,
+      categoryTotals,
+      closedAt: new Date().toISOString(),
+    };
+
+    try {
+      await addDocumentNonBlocking(monthlyClosuresCollection, closureData);
+      toast({
+        title: 'Cierre Exitoso',
+        description: `El mes de ${months[selectedMonth].label} ${selectedYear} ha sido cerrado.`,
+      });
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Error al cerrar el mes',
+        description: 'Hubo un problema al guardar el cierre del mes.',
+      });
+    } finally {
+      setIsClosingMonth(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -169,10 +239,15 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="bg-accent text-accent-foreground hover:bg-accent/90">
-            <FileDown className="mr-2 h-4 w-4" />
-            {isGeneratingPdf ? 'Generando...' : 'Exportar a PDF'}
-          </Button>
+          <div className='flex gap-2'>
+            <Button onClick={handleCloseMonth} disabled={isClosingMonth || isClosed} variant="secondary">
+              {isClosingMonth ? 'Cerrando...' : (isClosed ? 'Mes Cerrado' : 'Cierre del Mes')}
+            </Button>
+            <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="bg-accent text-accent-foreground hover:bg-accent/90">
+              <FileDown className="mr-2 h-4 w-4" />
+              {isGeneratingPdf ? 'Generando...' : 'Exportar a PDF'}
+            </Button>
+          </div>
         </div>
 
         <div ref={reportRef} className="p-4 bg-background rounded-lg">

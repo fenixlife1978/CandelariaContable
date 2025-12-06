@@ -22,3 +22,15 @@ export type Expense = {
   description: string;
   category: string;
 }
+
+export type MonthlyClosure = {
+  id: string;
+  month: number;
+  year: number;
+  initialBalance: number;
+  totalIncome: number;
+  totalExpenses: number;
+  finalBalance: number;
+  categoryTotals: Record<string, { income: number; expense: number }>;
+  closedAt: string;
+};

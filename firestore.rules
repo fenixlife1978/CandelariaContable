@@ -53,11 +53,7 @@ service cloud.firestore {
      * @principle Enforces a single security boundary: the user must be signed in.
      */
     match /incomes/{incomeId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      allow read, write: if isSignedIn();
     }
 
     /**
@@ -68,11 +64,7 @@ service cloud.firestore {
      * @principle Enforces a single security boundary: the user must be signed in.
      */
     match /expenses/{expenseId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      allow read, write: if isSignedIn();
     }
 
     /**
@@ -83,11 +75,18 @@ service cloud.firestore {
      * @principle Enforces a single security boundary: the user must be signed in.
      */
     match /loanSummaries/{loanSummaryId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isSignedIn();
-      allow update: if isSignedIn() && resource != null;
-      allow delete: if isSignedIn() && resource != null;
+      allow read, write: if isSignedIn();
+    }
+
+    /**
+     * @description Allows any authenticated user to manage monthly financial closures.
+     * @path /monthlyClosures/{closureId}
+     * @allow An authenticated user `(auth.uid: 'user_456')` can create a new monthly closure record.
+     * @deny An unauthenticated user `(auth: null)` is denied from reading any closure record.
+     * @principle Enforces a single security boundary: the user must be signed in.
+     */
+    match /monthlyClosures/{closureId} {
+        allow read, write: if isSignedIn();
     }
   }
 }
