@@ -25,6 +25,7 @@ import {
 } from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { Transaction } from '@/lib/types';
+import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
@@ -46,6 +47,11 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       date: new Date(),
     },
   });
+
+  const [isClient, setIsClient] = useState(false);
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     onSubmit(values);
@@ -140,7 +146,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                             !field.value && 'text-muted-foreground'
                           )}
                         >
-                          {field.value ? (
+                          {isClient && field.value ? (
                             format(field.value, 'PPP')
                           ) : (
                             <span>Pick a date</span>
