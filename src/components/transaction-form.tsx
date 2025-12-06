@@ -36,11 +36,11 @@ import { useWatch } from 'react-hook-form';
 import React from 'react';
 
 const transactionCategories = [
-  "Fiscalía",
-  "Capital Recuperado",
-  "Intereses Ganados",
-  "Préstamos Socios",
-  "Prestamos Candelaria",
+  "Ingreso por Fiscalía",
+  "Abono o Recupercion de Capital",
+  "Intereses Cobrados Al Mes",
+  "Prestamos del Mes / Socios",
+  "Prestamos / Candelaria",
   "Capital Inicial",
 ];
 
