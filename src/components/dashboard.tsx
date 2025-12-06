@@ -48,8 +48,8 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
 
 
   const { totalIncome, totalExpenses, capital } = useMemo(() => {
-    const totalIncomeInCents = incomesData?.reduce((sum, t) => sum + Math.round(t.amount * 100), 0) || 0;
-    const totalExpensesInCents = expensesData?.reduce((sum, t) => sum + Math.round(t.amount * 100), 0) || 0;
+    const totalIncomeInCents = incomesData?.reduce((sum, t) => sum + Math.round(parseFloat(String(t.amount)) * 100), 0) || 0;
+    const totalExpensesInCents = expensesData?.reduce((sum, t) => sum + Math.round(parseFloat(String(t.amount)) * 100), 0) || 0;
     const capitalInCents = totalIncomeInCents - totalExpensesInCents;
     
     return { 

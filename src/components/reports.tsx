@@ -70,7 +70,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     
     const previousMonthClosure = monthlyClosures.find(c => c.year === previousMonthYear && c.month === previousMonthMonth);
     
-    let capitalInicialInCents = Math.round((previousMonthClosure?.finalBalance ?? 0) * 100);
+    let capitalInicialInCents = Math.round(parseFloat(String(previousMonthClosure?.finalBalance ?? 0)) * 100);
 
     const transactionsForSelectedMonth = allTransactions.filter(transaction =>
       getMonth(transaction.date) === selectedMonth &&
@@ -83,12 +83,12 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         );
 
         if (initialCapitalTransaction) {
-            capitalInicialInCents = Math.round(initialCapitalTransaction.amount * 100);
+            capitalInicialInCents = Math.round(parseFloat(String(initialCapitalTransaction.amount)) * 100);
         } else {
             const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
             const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
             const totalInCents = transactionsBefore.reduce((acc, t) => {
-                const amountInCents = Math.round(t.amount * 100);
+                const amountInCents = Math.round(parseFloat(String(t.amount)) * 100);
                 return acc + (t.type === 'income' ? amountInCents : -amountInCents);
             }, 0);
             capitalInicialInCents = totalInCents;
@@ -110,16 +110,16 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
     const incomeInCents = filteredTransactions
       .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + Math.round(t.amount * 100), 0);
+      .reduce((sum, t) => sum + Math.round(parseFloat(String(t.amount)) * 100), 0);
     const expensesInCents = filteredTransactions
       .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + Math.round(t.amount * 100), 0);
+      .reduce((sum, t) => sum + Math.round(parseFloat(String(t.amount)) * 100), 0);
     
     const categoryTotalsInCents = filteredTransactions.reduce((acc, t) => {
         if (!acc[t.category]) {
             acc[t.category] = { income: 0, expense: 0 };
         }
-        const amountInCents = Math.round(t.amount * 100);
+        const amountInCents = Math.round(parseFloat(String(t.amount)) * 100);
         if (t.type === 'income') {
             acc[t.category].income += amountInCents;
         } else {
@@ -133,14 +133,13 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       return acc;
     }, {} as Record<string, { income: number; expense: number }>);
 
-    const currentMonthBalanceInCents = incomeInCents - expensesInCents;
-    const capitalInicialInCents = Math.round(capitalInicial * 100);
-    const capitalFinalInCents = capitalInicialInCents + currentMonthBalanceInCents;
+    const capitalInicialInCents = Math.round(parseFloat(String(capitalInicial)) * 100);
+    const capitalFinalInCents = capitalInicialInCents + incomeInCents - expensesInCents;
 
     return {
       totalIncome: incomeInCents / 100,
       totalExpenses: expensesInCents / 100,
-      balance: currentMonthBalanceInCents / 100,
+      balance: (incomeInCents - expensesInCents) / 100,
       categoryTotals,
       capitalFinal: capitalFinalInCents / 100,
     };
