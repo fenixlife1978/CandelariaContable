@@ -295,7 +295,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             </div>
 
             <h3 className="text-xl font-bold font-headline mb-4 text-center">
-                Reporte de {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
+                Reporte Financiero Mes {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
             </h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 text-center">
                 <div className="p-4 bg-secondary rounded-lg">
