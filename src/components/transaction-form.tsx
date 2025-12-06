@@ -5,11 +5,15 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { Calendar as CalendarIcon, PlusCircle } from 'lucide-react';
+import { PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
 import {
   Form,
   FormControl,
@@ -19,33 +23,57 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { Transaction } from '@/lib/types';
 import { useEffect, useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
   amount: z.coerce.number().min(0.01, 'El monto debe ser mayor que 0'),
-  description: z.string().min(2, 'La descripción debe tener al menos 2 caracteres').max(100),
-  date: z.date(),
-});
+  description: z
+    .string()
+    .min(2, 'La descripción debe tener al menos 2 caracteres')
+    .max(100),
+  day: z.coerce.number().int().min(1).max(31),
+  month: z.coerce.number().int().min(1).max(12),
+  year: z.coerce.number().int().min(new Date().getFullYear() - 100).max(new Date().getFullYear() + 1),
+}).refine(data => {
+    try {
+        new Date(data.year, data.month - 1, data.day);
+        return true;
+    } catch {
+        return false;
+    }
+}, { message: "La fecha no es válida", path: ["day"] });
+
+
+type TransactionFormValues = Omit<Transaction, 'id' | 'date'> & {
+    day: number;
+    month: number;
+    year: number;
+}
 
 type TransactionFormProps = {
   onSubmit: (transaction: Omit<Transaction, 'id'>) => void;
 };
 
 export function TransactionForm({ onSubmit }: TransactionFormProps) {
+  const today = new Date();
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       type: 'income',
       description: '',
-      date: new Date(),
+      day: today.getDate(),
+      month: today.getMonth() + 1,
+      year: today.getFullYear(),
     },
   });
 
@@ -55,14 +83,26 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   }, []);
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    onSubmit(values);
+    const date = new Date(values.year, values.month - 1, values.day);
+    onSubmit({
+        type: values.type,
+        amount: values.amount,
+        description: values.description,
+        date: date
+    });
     form.reset({
       type: values.type,
       amount: undefined,
       description: '',
-      date: new Date(),
+      day: today.getDate(),
+      month: today.getMonth() + 1,
+      year: today.getFullYear(),
     });
   };
+
+  const years = Array.from({ length: 102 }, (_, i) => new Date().getFullYear() - 100 + i).reverse();
+  const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: format(new Date(2000, i, 1), 'MMMM', { locale: es }) }));
+  const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
     <Card>
@@ -71,7 +111,10 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       </CardHeader>
       <CardContent>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form
+            onSubmit={form.handleSubmit(handleSubmit)}
+            className="space-y-6"
+          >
             <FormField
               control={form.control}
               name="type"
@@ -110,7 +153,12 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                 <FormItem>
                   <FormLabel>Monto</FormLabel>
                   <FormControl>
-                    <Input type="number" placeholder="0.00" {...field} step="0.01" />
+                    <Input
+                      type="number"
+                      placeholder="0.00"
+                      {...field}
+                      step="0.01"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -131,47 +179,78 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="date"
-              render={({ field }) => (
-                <FormItem className="flex flex-col">
-                  <FormLabel>Fecha</FormLabel>
-                  <Popover>
-                    <PopoverTrigger asChild>
-                      <FormControl>
-                        <Button
-                          variant={'outline'}
-                          className={cn(
-                            'w-full pl-3 text-left font-normal',
-                            !field.value && 'text-muted-foreground'
-                          )}
-                        >
-                          {isClient && field.value ? (
-                            format(field.value, 'PPP', { locale: es })
-                          ) : (
-                            <span>Elige una fecha</span>
-                          )}
-                          <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                        </Button>
-                      </FormControl>
-                    </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
-                      <Calendar
-                        mode="single"
-                        selected={field.value}
-                        onSelect={field.onChange}
-                        initialFocus
-                        locale={es}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <FormItem>
+              <FormLabel>Fecha</FormLabel>
+              <div className="grid grid-cols-3 gap-2">
+                <FormField
+                  control={form.control}
+                  name="day"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Día" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {days.map((day) => (
+                            <SelectItem key={day} value={String(day)}>{day}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="month"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Mes" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {months.map((month) => (
+                            <SelectItem key={month.value} value={String(month.value)}>{month.label}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="year"
+                  render={({ field }) => (
+                    <FormItem>
+                      <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Año" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {years.map((year) => (
+                            <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormItem>
+                  )}
+                />
+              </div>
+               <FormMessage>{form.formState.errors.day?.message}</FormMessage>
+            </FormItem>
+            
 
-            <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
+            <Button
+              type="submit"
+              className="w-full bg-accent text-accent-foreground hover:bg-accent/90"
+            >
               <PlusCircle className="mr-2 h-4 w-4" /> Añadir Transacción
             </Button>
           </form>
