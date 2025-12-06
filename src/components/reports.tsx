@@ -363,4 +363,5 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       </CardContent>
     </Card>
   );
-}
+
+    
