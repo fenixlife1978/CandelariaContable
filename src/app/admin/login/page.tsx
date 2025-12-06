@@ -132,7 +132,7 @@ export default function LoginPage() {
                         {...field}
                         type="password"
                       />
-FormControl>
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
