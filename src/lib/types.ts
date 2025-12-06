@@ -34,3 +34,13 @@ export type MonthlyClosure = {
   categoryTotals: Record<string, { income: number; expense: number }>;
   closedAt: string;
 };
+
+export type CompanyProfile = {
+  id: string;
+  name?: string;
+  rif?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  logo?: string;
+}

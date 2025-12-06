@@ -166,6 +166,43 @@
         "categoryTotals",
         "closedAt"
       ]
+    },
+    "CompanyProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CompanyProfile",
+      "type": "object",
+      "description": "Stores the company's profile information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the company profile, should be a singleton."
+        },
+        "name": {
+          "type": "string",
+          "description": "The name of the company."
+        },
+        "rif": {
+          "type": "string",
+          "description": "The company's tax ID (RIF)."
+        },
+        "address": {
+          "type": "string",
+          "description": "The company's address."
+        },
+        "phone": {
+          "type": "string",
+          "description": "The company's phone number."
+        },
+        "email": {
+          "type": "string",
+          "description": "The company's email address.",
+          "format": "email"
+        },
+        "logo": {
+          "type": "string",
+          "description": "Data URI of the company's logo."
+        }
+      }
     }
   },
   "auth": {
@@ -236,6 +273,22 @@
             {
               "name": "closureId",
               "description": "Unique identifier for the monthly closure."
+            }
+          ]
+        }
+      },
+       {
+        "path": "/companyProfile/{profileId}",
+        "definition": {
+          "entityName": "CompanyProfile",
+          "schema": {
+            "$ref": "#/backend/entities/CompanyProfile"
+          },
+          "description": "Stores company profile data. A single document should exist. Authenticated users have full read/write access.",
+          "params": [
+            {
+              "name": "profileId",
+              "description": "Should be a singleton, e.g., 'main'."
             }
           ]
         }

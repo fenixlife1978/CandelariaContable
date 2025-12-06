@@ -88,5 +88,16 @@ service cloud.firestore {
     match /monthlyClosures/{closureId} {
         allow read, write: if isSignedIn();
     }
+    
+    /**
+     * @description Allows any authenticated user to manage the company profile.
+     * @path /companyProfile/{profileId}
+     * @allow An authenticated user `(auth.uid: 'user_789')` can create and update the company profile.
+     * @deny An unauthenticated user `(auth: null)` is denied from reading or writing the company profile.
+     * @principle Enforces a single security boundary: the user must be signed in.
+     */
+    match /companyProfile/{profileId} {
+      allow read, write: if isSignedIn();
+    }
   }
 }

@@ -21,25 +21,27 @@ import {
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
 import { TransactionsTable } from './transactions-table';
-import type { Transaction, MonthlyClosure } from '@/lib/types';
+import type { Transaction, MonthlyClosure, CompanyProfile } from '@/lib/types';
 import { FileDown, Pencil, Banknote } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, where, query, getDocs } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
+import Image from 'next/image';
 
 type ReportsProps = {
   allTransactions: Transaction[];
   monthlyClosures: MonthlyClosure[];
   formatCurrency: (amount: number) => string;
   isLoading: boolean;
+  companyProfile: CompanyProfile | null;
 };
 
-export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLoading }: ReportsProps) {
+export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLoading, companyProfile }: ReportsProps) {
   const today = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<number>(8); // August
-  const [selectedYear, setSelectedYear] = useState<number>(2023); // 2023
+  const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(today));
+  const [selectedYear, setSelectedYear] = useState<number>(getYear(today));
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isClosingMonth, setIsClosingMonth] = useState(false);
   const { toast } = useToast();
@@ -49,10 +51,12 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   const monthlyClosuresCollection = useMemoFirebase(() => collection(firestore, 'monthlyClosures'), [firestore]);
 
   const years = useMemo(() => {
-    const allYears = allTransactions.map(t => getYear(t.date));
-    const uniqueYears = [...new Set(allYears), today.getFullYear()];
+    const transactionYears = allTransactions.map(t => getYear(t.date));
+    const closureYears = monthlyClosures.map(c => c.year);
+    const allYears = [...transactionYears, ...closureYears, today.getFullYear(), 2023];
+    const uniqueYears = [...new Set(allYears)];
     return uniqueYears.sort((a, b) => b - a);
-  }, [allTransactions, today]);
+  }, [allTransactions, monthlyClosures, today]);
 
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: i,
@@ -81,8 +85,9 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       if (initialCapitalTransaction) {
         capitalInicial = initialCapitalTransaction.amount;
       } else {
+        // If no "Capital Inicial" transaction found in the current month, calculate from all previous transactions
         const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
-        const transactionsBefore = allTransactions.filter(t => t.date < startOfSelectedMonth);
+        const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
         capitalInicial = transactionsBefore.reduce((acc, t) => {
             return acc + (t.type === 'income' ? t.amount : -t.amount);
         }, 0);
@@ -91,8 +96,8 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     
     const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
 
-    // Filter out the initial capital transaction from the list of transactions to be displayed
-    const filtered = transactionsForSelectedMonth.filter(t => t.category !== 'Capital Inicial');
+    // Filter out the initial capital transaction from the list of transactions to be displayed if it was used for initial balance
+     const filtered = transactionsForSelectedMonth.filter(t => !(t.category === 'Capital Inicial' && t.type === 'income'));
     
     return { filteredTransactions: filtered, capitalInicial, isClosed: isMonthClosed };
   }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
@@ -149,6 +154,11 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       pdf.save(`reporte-${months[selectedMonth].label}-${selectedYear}.pdf`);
     } catch(error) {
       console.error("Error al generar el PDF:", error)
+      toast({
+        variant: 'destructive',
+        title: 'Error al generar PDF',
+        description: 'Hubo un problema al exportar el reporte.'
+      })
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -157,6 +167,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   const handleCloseMonth = async () => {
     setIsClosingMonth(true);
 
+    const closureId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
     const q = query(
       monthlyClosuresCollection,
       where('year', '==', selectedYear),
@@ -174,7 +185,8 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       return;
     }
 
-    const closureData: Omit<MonthlyClosure, 'id'> = {
+    const closureData = {
+      id: closureId,
       month: selectedMonth,
       year: selectedYear,
       initialBalance: capitalInicial,
@@ -257,16 +269,31 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
           </div>
         </div>
 
-        <div className="p-4 bg-background rounded-lg">
+        <div className="border bg-background rounded-lg">
           <div ref={reportRef} className="p-6">
-            <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
-                    <Banknote className="h-7 w-7 text-primary-foreground" />
-                </div>
-                <h1 className="text-3xl font-bold text-foreground font-headline">
-                    Contabilidad LoanStar
-                </h1>
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden">
+                    {companyProfile?.logo ? (
+                      <Image src={companyProfile.logo} alt="Logo" width={48} height={48} className="object-cover" />
+                    ): (
+                      <Banknote className="h-7 w-7 text-primary-foreground" />
+                    )}
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-bold text-foreground font-headline">
+                        {companyProfile?.name || 'Contabilidad LoanStar'}
+                    </h1>
+                    <p className='text-xs text-muted-foreground'>{companyProfile?.rif}</p>
+                  </div>
+              </div>
+              <div className='text-right text-xs'>
+                <p>{companyProfile?.address}</p>
+                <p>{companyProfile?.phone}</p>
+                <p>{companyProfile?.email}</p>
+              </div>
             </div>
+
             <h3 className="text-xl font-bold font-headline mb-4 text-center">
                 Reporte de {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
             </h3>
@@ -319,19 +346,6 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
                 <p className="text-muted-foreground text-center mb-6">No hay datos de categorías para este período.</p>
             )}
           </div>
-
-          <Separator className="my-6" />
-
-          <h4 className="text-lg font-bold font-headline mb-4 text-center">
-            Detalle de Transacciones
-          </h4>
-          <TransactionsTable
-            transactions={filteredTransactions}
-            onDelete={() => {}} 
-            onUpdate={() => {}}
-            formatCurrency={formatCurrency}
-            isLoading={isLoading}
-          />
         </div>
       </CardContent>
     </Card>

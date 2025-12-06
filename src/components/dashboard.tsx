@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import type { Transaction } from '@/lib/types';
+import type { Transaction, CompanyProfile } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, Scale } from 'lucide-react';
+import { TrendingUp, TrendingDown, Scale, Settings } from 'lucide-react';
 import { TransactionForm } from './transaction-form';
 import { TransactionsTable } from './transactions-table';
 import { AiSummaryModal } from './ai-summary-modal';
@@ -18,8 +18,13 @@ import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc } from 'firebase/firestore';
 import { Reports } from './reports';
+import { Configuration } from './configuration';
 
-export default function Dashboard() {
+type DashboardProps = {
+  companyProfile: CompanyProfile | null;
+}
+
+export default function Dashboard({ companyProfile }: DashboardProps) {
   const firestore = useFirestore();
 
   const incomesCollection = useMemoFirebase(() => collection(firestore, 'incomes'), [firestore]);
@@ -140,6 +145,10 @@ export default function Dashboard() {
         <TabsList>
           <TabsTrigger value="transactions">Transacciones</TabsTrigger>
           <TabsTrigger value="reports">Reportes</TabsTrigger>
+          <TabsTrigger value="configuration">
+            <Settings className="mr-2 h-4 w-4" />
+            Configuración
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="transactions" className="mt-6">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -157,7 +166,11 @@ export default function Dashboard() {
             monthlyClosures={monthlyClosuresData || []}
             formatCurrency={formatCurrency} 
             isLoading={isLoading} 
+            companyProfile={companyProfile}
           />
+        </TabsContent>
+        <TabsContent value="configuration" className="mt-6">
+          <Configuration companyProfile={companyProfile} />
         </TabsContent>
       </Tabs>
     </div>
