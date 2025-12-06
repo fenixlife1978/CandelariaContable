@@ -7,12 +7,14 @@ export type Transaction = {
 };
 
 export type Income = {
+  id: string;
   date: string;
   amount: number;
   description: string;
 }
 
 export type Expense = {
+  id: string;
   date: string;
   amount: number;
   description: string;

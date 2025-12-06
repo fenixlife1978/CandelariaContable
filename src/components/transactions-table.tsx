@@ -17,7 +17,7 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Trash2 } from 'lucide-react';
+import { Trash2, Loader } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,11 +36,12 @@ import { es } from 'date-fns/locale';
 
 type TransactionsTableProps = {
   transactions: Transaction[];
-  onDelete: (id: string) => void;
+  onDelete: (id: string, type: 'income' | 'expense') => void;
   formatCurrency: (amount: number) => string;
+  isLoading: boolean;
 };
 
-export function TransactionsTable({ transactions, onDelete, formatCurrency }: TransactionsTableProps) {
+export function TransactionsTable({ transactions, onDelete, formatCurrency, isLoading }: TransactionsTableProps) {
   return (
     <Card>
       <CardHeader>
@@ -60,14 +61,23 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency }: Tr
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactions.length === 0 && (
+              {isLoading && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center h-24">
+                    <div className="flex justify-center items-center">
+                      <Loader className="h-6 w-6 animate-spin" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+              {!isLoading && transactions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center h-24">
                     Aún no hay transacciones.
                   </TableCell>
                 </TableRow>
               )}
-              {transactions.map((transaction) => (
+              {!isLoading && transactions.map((transaction) => (
                 <TableRow key={transaction.id}>
                   <TableCell className="hidden md:table-cell">{format(transaction.date, 'dd MMM, yyyy', { locale: es })}</TableCell>
                    <TableCell className="md:hidden table-cell">{format(transaction.date, 'dd/MM/yy', { locale: es })}</TableCell>
@@ -100,7 +110,7 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency }: Tr
                         <AlertDialogFooter>
                           <AlertDialogCancel>Cancelar</AlertDialogCancel>
                           <AlertDialogAction
-                            onClick={() => onDelete(transaction.id)}
+                            onClick={() => onDelete(transaction.id, transaction.type)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
                             Eliminar

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useMemo } from 'react';
 import type { Transaction } from '@/lib/types';
 import {
   Card,
@@ -13,52 +13,57 @@ import { TransactionForm } from './transaction-form';
 import { TransactionsTable } from './transactions-table';
 import { AiSummaryModal } from './ai-summary-modal';
 import type { Income, Expense } from '@/lib/types';
-
-const initialTransactions: Transaction[] = [
-  { id: '1', type: 'income', amount: 2000, description: 'Pago de préstamo de Juan D.', date: new Date('2024-05-15') },
-  { id: '2', type: 'income', amount: 1500, description: 'Pago de préstamo de Jane S.', date: new Date('2024-05-20') },
-  { id: '3', type: 'expense', amount: 300, description: 'Suministros de oficina', date: new Date('2024-05-18') },
-  { id: '4', type: 'expense', amount: 50, description: 'Cargos bancarios', date: new Date('2024-05-22') },
-  { id: '5', type: 'income', amount: 500, description: 'Ingresos por intereses', date: new Date('2024-05-25') },
-];
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
 
 export default function Dashboard() {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const firestore = useFirestore();
+
+  const incomesCollection = useMemoFirebase(() => collection(firestore, 'incomes'), [firestore]);
+  const expensesCollection = useMemoFirebase(() => collection(firestore, 'expenses'), [firestore]);
   
-  useEffect(() => {
-    // Sort initial transactions only on the client to avoid hydration issues
-    setTransactions(initialTransactions.sort((a,b) => b.date.getTime() - a.date.getTime()));
-  }, []);
+  const { data: incomesData, isLoading: incomesLoading } = useCollection<Income>(incomesCollection);
+  const { data: expensesData, isLoading: expensesLoading } = useCollection<Expense>(expensesCollection);
+
+  const transactions: Transaction[] = useMemo(() => {
+    const combined: Transaction[] = [];
+    if (incomesData) {
+      combined.push(...incomesData.map(i => ({...i, type: 'income', date: new Date(i.date) } as Transaction)));
+    }
+    if (expensesData) {
+      combined.push(...expensesData.map(e => ({...e, type: 'expense', date: new Date(e.date) } as Transaction)));
+    }
+    return combined.sort((a,b) => b.date.getTime() - a.date.getTime());
+  }, [incomesData, expensesData]);
 
 
   const { totalIncome, totalExpenses, capital } = useMemo(() => {
-    const totalIncome = transactions
-      .filter((t) => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-
-    const totalExpenses = transactions
-      .filter((t) => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
-    
+    const totalIncome = incomesData?.reduce((sum, t) => sum + t.amount, 0) || 0;
+    const totalExpenses = expensesData?.reduce((sum, t) => sum + t.amount, 0) || 0;
     const capital = totalIncome - totalExpenses;
-
     return { totalIncome, totalExpenses, capital };
-  }, [transactions]);
+  }, [incomesData, expensesData]);
   
-  const incomes: Income[] = useMemo(() => transactions
-    .filter(t => t.type === 'income')
-    .map(t => ({ date: t.date.toISOString().split('T')[0], amount: t.amount, description: t.description })), [transactions]);
-
-  const expenses: Expense[] = useMemo(() => transactions
-    .filter(t => t.type === 'expense')
-    .map(t => ({ date: t.date.toISOString().split('T')[0], amount: t.amount, description: t.description })), [transactions]);
-
-  const addTransaction = (transaction: Omit<Transaction, 'id'>) => {
-    setTransactions(prev => [...prev, { ...transaction, id: crypto.randomUUID() }].sort((a,b) => b.date.getTime() - a.date.getTime()));
+  const addTransaction = (transaction: Omit<Transaction, 'id' | 'date'> & { date: Date }) => {
+    const data = {
+      description: transaction.description,
+      amount: transaction.amount,
+      date: transaction.date.toISOString(),
+    };
+    if (transaction.type === 'income') {
+      addDocumentNonBlocking(incomesCollection, data);
+    } else {
+      addDocumentNonBlocking(expensesCollection, data);
+    }
   };
   
-  const deleteTransaction = (id: string) => {
-    setTransactions(prev => prev.filter(t => t.id !== id));
+  const deleteTransaction = (id: string, type: 'income' | 'expense') => {
+    if (type === 'income') {
+      deleteDocumentNonBlocking(doc(firestore, 'incomes', id));
+    } else {
+      deleteDocumentNonBlocking(doc(firestore, 'expenses', id));
+    }
   };
   
   const formatCurrency = (amount: number) => {
@@ -67,12 +72,17 @@ export default function Dashboard() {
       currency: 'USD',
     }).format(amount);
   };
+  
+  const incomesForSummary: Income[] = useMemo(() => incomesData?.map(i => ({ date: i.date, amount: i.amount, description: i.description })) || [], [incomesData]);
+  const expensesForSummary: Expense[] = useMemo(() => expensesData?.map(e => ({ date: e.date, amount: e.amount, description: e.description })) || [], [expensesData]);
+
+  const isLoading = incomesLoading || expensesLoading;
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-3xl font-bold tracking-tight font-headline">Panel de Control</h2>
-        <AiSummaryModal incomes={incomes} expenses={expenses} capital={capital} />
+        <AiSummaryModal incomes={incomesForSummary} expenses={expensesForSummary} capital={capital} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -83,7 +93,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalIncome)}</div>
-            <p className="text-xs text-muted-foreground">de {incomes.length} transacciones</p>
+            <p className="text-xs text-muted-foreground">de {incomesData?.length || 0} transacciones</p>
           </CardContent>
         </Card>
         <Card>
@@ -93,7 +103,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
-            <p className="text-xs text-muted-foreground">de {expenses.length} transacciones</p>
+            <p className="text-xs text-muted-foreground">de {expensesData?.length || 0} transacciones</p>
           </CardContent>
         </Card>
         <Card className="bg-primary text-primary-foreground">
@@ -113,7 +123,7 @@ export default function Dashboard() {
           <TransactionForm onSubmit={addTransaction} />
         </div>
         <div className="lg:col-span-2">
-          <TransactionsTable transactions={transactions} onDelete={deleteTransaction} formatCurrency={formatCurrency}/>
+          <TransactionsTable transactions={transactions} onDelete={deleteTransaction} formatCurrency={formatCurrency} isLoading={isLoading} />
         </div>
       </div>
     </div>
