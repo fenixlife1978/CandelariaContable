@@ -38,8 +38,8 @@ type ReportsProps = {
 
 export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLoading }: ReportsProps) {
   const today = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<number>(today.getMonth());
-  const [selectedYear, setSelectedYear] = useState<number>(today.getFullYear());
+  const [selectedMonth, setSelectedMonth] = useState<number>(8); // August
+  const [selectedYear, setSelectedYear] = useState<number>(2023); // 2023
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isClosingMonth, setIsClosingMonth] = useState(false);
   const { toast } = useToast();
@@ -65,28 +65,35 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     const previousMonthMonth = getMonth(previousMonthDate);
 
     const previousMonthClosure = monthlyClosures.find(c => c.year === previousMonthYear && c.month === previousMonthMonth);
-    const capitalFromClosure = previousMonthClosure?.finalBalance ?? 0;
+    let capitalInicial = previousMonthClosure?.finalBalance ?? 0;
+    
+    // Filter transactions for the selected month and year first
+    const transactionsForSelectedMonth = allTransactions.filter(transaction =>
+      getMonth(transaction.date) === selectedMonth &&
+      getYear(transaction.date) === selectedYear
+    );
 
-    let capitalFromTransactions = 0;
+    // If there is no previous month closure, check for "Capital Inicial" transaction
     if (!previousMonthClosure) {
+      const initialCapitalTransaction = transactionsForSelectedMonth.find(
+        t => t.category === "Capital Inicial" && t.type === 'income'
+      );
+      if (initialCapitalTransaction) {
+        capitalInicial = initialCapitalTransaction.amount;
+      } else {
         const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
         const transactionsBefore = allTransactions.filter(t => t.date < startOfSelectedMonth);
-        capitalFromTransactions = transactionsBefore.reduce((acc, t) => {
+        capitalInicial = transactionsBefore.reduce((acc, t) => {
             return acc + (t.type === 'income' ? t.amount : -t.amount);
         }, 0);
+      }
     }
     
-    const capitalInicial = previousMonthClosure ? capitalFromClosure : capitalFromTransactions;
-
-    const filtered = allTransactions.filter(transaction => {
-      return (
-        getMonth(transaction.date) === selectedMonth &&
-        getYear(transaction.date) === selectedYear
-      );
-    });
-
     const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
 
+    // Filter out the initial capital transaction from the list of transactions to be displayed
+    const filtered = transactionsForSelectedMonth.filter(t => t.category !== 'Capital Inicial');
+    
     return { filteredTransactions: filtered, capitalInicial, isClosed: isMonthClosed };
   }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
 
@@ -252,7 +259,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
 
         <div ref={reportRef} className="p-4 bg-background rounded-lg">
           <h3 className="text-xl font-bold font-headline mb-4 text-center">
-            Reporte de {months[selectedMonth].label} {selectedYear}
+            Reporte de {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
           </h3>
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 text-center">
             <div className="p-4 bg-secondary rounded-lg">
