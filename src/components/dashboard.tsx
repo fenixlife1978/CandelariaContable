@@ -19,6 +19,7 @@ import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlo
 import { collection, doc } from 'firebase/firestore';
 import { Reports } from './reports';
 import { Configuration } from './configuration';
+import Decimal from 'decimal.js';
 
 type DashboardProps = {
   companyProfile: CompanyProfile | null;
@@ -48,14 +49,22 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
 
 
   const { totalIncome, totalExpenses, capital } = useMemo(() => {
-    const totalIncomeInCents = incomesData?.reduce((sum, t) => sum + Math.round(parseFloat(String(t.amount)) * 100), 0) || 0;
-    const totalExpensesInCents = expensesData?.reduce((sum, t) => sum + Math.round(parseFloat(String(t.amount)) * 100), 0) || 0;
-    const capitalInCents = totalIncomeInCents - totalExpensesInCents;
+    const totalIncomeValue = incomesData?.reduce(
+      (sum, t) => sum.plus(new Decimal(t.amount)),
+      new Decimal(0)
+    ) || new Decimal(0);
     
+    const totalExpensesValue = expensesData?.reduce(
+      (sum, t) => sum.plus(new Decimal(t.amount)),
+      new Decimal(0)
+    ) || new Decimal(0);
+
+    const capitalValue = totalIncomeValue.minus(totalExpensesValue);
+
     return { 
-      totalIncome: totalIncomeInCents / 100, 
-      totalExpenses: totalExpensesInCents / 100, 
-      capital: capitalInCents / 100 
+      totalIncome: totalIncomeValue.toNumber(), 
+      totalExpenses: totalExpensesValue.toNumber(), 
+      capital: capitalValue.toNumber()
     };
   }, [incomesData, expensesData]);
   

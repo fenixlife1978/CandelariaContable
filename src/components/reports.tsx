@@ -29,6 +29,7 @@ import { collection, where, query, getDocs } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
+import Decimal from 'decimal.js';
 
 type ReportsProps = {
   allTransactions: Transaction[];
@@ -70,7 +71,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     
     const previousMonthClosure = monthlyClosures.find(c => c.year === previousMonthYear && c.month === previousMonthMonth);
     
-    let capitalInicialInCents = Math.round(parseFloat(String(previousMonthClosure?.finalBalance ?? 0)) * 100);
+    let capitalInicialValue = new Decimal(previousMonthClosure?.finalBalance ?? 0);
 
     const transactionsForSelectedMonth = allTransactions.filter(transaction =>
       getMonth(transaction.date) === selectedMonth &&
@@ -83,15 +84,15 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         );
 
         if (initialCapitalTransaction) {
-            capitalInicialInCents = Math.round(parseFloat(String(initialCapitalTransaction.amount)) * 100);
+            capitalInicialValue = new Decimal(initialCapitalTransaction.amount);
         } else {
             const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
             const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
-            const totalInCents = transactionsBefore.reduce((acc, t) => {
-                const amountInCents = Math.round(parseFloat(String(t.amount)) * 100);
-                return acc + (t.type === 'income' ? amountInCents : -amountInCents);
-            }, 0);
-            capitalInicialInCents = totalInCents;
+            const totalValue = transactionsBefore.reduce((acc, t) => {
+                const amount = new Decimal(t.amount);
+                return acc.plus(t.type === 'income' ? amount : amount.negated());
+            }, new Decimal(0));
+            capitalInicialValue = totalValue;
         }
     }
 
@@ -101,47 +102,48 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     
     return { 
       filteredTransactions: filtered, 
-      capitalInicial: capitalInicialInCents / 100, 
+      capitalInicial: capitalInicialValue.toNumber(), 
       isClosed: isMonthClosed 
     };
 }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
 
 
   const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
-    const incomeInCents = filteredTransactions
+    const incomeValue = filteredTransactions
       .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + Math.round(parseFloat(String(t.amount)) * 100), 0);
-    const expensesInCents = filteredTransactions
+      .reduce((sum, t) => sum.plus(new Decimal(t.amount)), new Decimal(0));
+      
+    const expensesValue = filteredTransactions
       .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + Math.round(parseFloat(String(t.amount)) * 100), 0);
+      .reduce((sum, t) => sum.plus(new Decimal(t.amount)), new Decimal(0));
     
-    const categoryTotalsInCents = filteredTransactions.reduce((acc, t) => {
+    const categoryTotalsMap = filteredTransactions.reduce((acc, t) => {
         if (!acc[t.category]) {
-            acc[t.category] = { income: 0, expense: 0 };
+            acc[t.category] = { income: new Decimal(0), expense: new Decimal(0) };
         }
-        const amountInCents = Math.round(parseFloat(String(t.amount)) * 100);
+        const amount = new Decimal(t.amount);
         if (t.type === 'income') {
-            acc[t.category].income += amountInCents;
+            acc[t.category].income = acc[t.category].income.plus(amount);
         } else {
-            acc[t.category].expense += amountInCents;
+            acc[t.category].expense = acc[t.category].expense.plus(amount);
         }
         return acc;
-    }, {} as Record<string, { income: number; expense: number }>);
+    }, {} as Record<string, { income: Decimal; expense: Decimal }>);
     
-    const categoryTotals = Object.entries(categoryTotalsInCents).reduce((acc, [key, value]) => {
-      acc[key] = { income: value.income / 100, expense: value.expense / 100 };
+    const categoryTotalsResult = Object.entries(categoryTotalsMap).reduce((acc, [key, value]) => {
+      acc[key] = { income: value.income.toNumber(), expense: value.expense.toNumber() };
       return acc;
     }, {} as Record<string, { income: number; expense: number }>);
 
-    const capitalInicialInCents = Math.round(parseFloat(String(capitalInicial)) * 100);
-    const capitalFinalInCents = capitalInicialInCents + incomeInCents - expensesInCents;
+    const capitalInicialValue = new Decimal(capitalInicial);
+    const capitalFinalValue = capitalInicialValue.plus(incomeValue).minus(expensesValue);
 
     return {
-      totalIncome: incomeInCents / 100,
-      totalExpenses: expensesInCents / 100,
-      balance: (incomeInCents - expensesInCents) / 100,
-      categoryTotals,
-      capitalFinal: capitalFinalInCents / 100,
+      totalIncome: incomeValue.toNumber(),
+      totalExpenses: expensesValue.toNumber(),
+      balance: incomeValue.minus(expensesValue).toNumber(),
+      categoryTotals: categoryTotalsResult,
+      capitalFinal: capitalFinalValue.toNumber(),
     };
   }, [filteredTransactions, capitalInicial]);
 
@@ -349,7 +351,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
                             <Separator className="my-2" />
                             <div className="flex justify-between font-bold">
                                 <span>Balance:</span>
-                                <span>{formatCurrency(totals.income - totals.expense)}</span>
+                                <span>{formatCurrency(new Decimal(totals.income).minus(totals.expense).toNumber())}</span>
                             </div>
                         </div>
                     ))}
@@ -364,3 +366,4 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   );
 
     
+
