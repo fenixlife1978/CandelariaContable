@@ -45,7 +45,7 @@ const transactionCategories = [
 
 const presetDescriptions = [
   "Ingreso por Fiscalía",
-  "Abono o Recupercion de Capital",
+  "Abono o Recuperación de Capital",
   "Intereses Cobrados Al Mes",
   "Prestamos del Mes / Socios",
   "Prestamos / Candelaria",
@@ -135,6 +135,12 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
     onClose();
   };
 
+  const handlePresetSelect = (value: string) => {
+    const currentValue = form.getValues('description');
+    const newValue = currentValue ? `${currentValue} ${value}` : value;
+    form.setValue('description', newValue, { shouldValidate: true });
+  };
+
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 2023 + 2 }, (_, i) => 2023 + i).reverse();
   const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: format(new Date(2000, i, 1), 'MMMM', { locale: es }) }));
@@ -207,7 +213,7 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
                     
                     <div className='space-y-2'>
                         <FormLabel>Concepto / Descripción</FormLabel>
-                        <Select onValueChange={(value) => form.setValue('description', value)}>
+                        <Select onValueChange={handlePresetSelect}>
                             <SelectTrigger>
                             <SelectValue placeholder="Selecciona un concepto predeterminado" />
                             </SelectTrigger>
