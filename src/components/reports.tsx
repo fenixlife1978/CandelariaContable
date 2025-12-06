@@ -22,7 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { TransactionsTable } from './transactions-table';
 import type { Transaction, MonthlyClosure } from '@/lib/types';
-import { FileDown, Pencil } from 'lucide-react';
+import { FileDown, Pencil, Banknote } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, where, query, getDocs } from 'firebase/firestore';
@@ -257,58 +257,68 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
           </div>
         </div>
 
-        <div ref={reportRef} className="p-4 bg-background rounded-lg">
-          <h3 className="text-xl font-bold font-headline mb-4 text-center">
-            Reporte de {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
-          </h3>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 text-center">
-            <div className="p-4 bg-secondary rounded-lg">
-              <p className="text-sm text-muted-foreground">Capital Inicial</p>
-              <p className="text-lg font-bold">{formatCurrency(capitalInicial)}</p>
+        <div className="p-4 bg-background rounded-lg">
+          <div ref={reportRef} className="p-6">
+            <div className="flex items-center gap-3 mb-6">
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center">
+                    <Banknote className="h-7 w-7 text-primary-foreground" />
+                </div>
+                <h1 className="text-3xl font-bold text-foreground font-headline">
+                    Contabilidad LoanStar
+                </h1>
             </div>
-            <div className="p-4 bg-secondary rounded-lg">
-              <p className="text-sm text-muted-foreground">Ingresos del Mes</p>
-              <p className="text-lg font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+            <h3 className="text-xl font-bold font-headline mb-4 text-center">
+                Reporte de {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
+            </h3>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 text-center">
+                <div className="p-4 bg-secondary rounded-lg">
+                <p className="text-sm text-muted-foreground">Capital Inicial</p>
+                <p className="text-lg font-bold">{formatCurrency(capitalInicial)}</p>
+                </div>
+                <div className="p-4 bg-secondary rounded-lg">
+                <p className="text-sm text-muted-foreground">Ingresos del Mes</p>
+                <p className="text-lg font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+                </div>
+                <div className="p-4 bg-secondary rounded-lg">
+                <p className="text-sm text-muted-foreground">Egresos del Mes</p>
+                <p className="text-lg font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+                </div>
+                <div className="p-4 bg-secondary rounded-lg">
+                <p className="text-sm text-muted-foreground">Capital Final</p>
+                <p className="text-lg font-bold">{formatCurrency(capitalFinal)}</p>
+                </div>
             </div>
-            <div className="p-4 bg-secondary rounded-lg">
-              <p className="text-sm text-muted-foreground">Egresos del Mes</p>
-              <p className="text-lg font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
-            </div>
-             <div className="p-4 bg-secondary rounded-lg">
-              <p className="text-sm text-muted-foreground">Capital Final</p>
-              <p className="text-lg font-bold">{formatCurrency(capitalFinal)}</p>
-            </div>
-          </div>
-          
-          <Separator className="my-6" />
+            
+            <Separator className="my-6" />
 
-          <h4 className="text-lg font-bold font-headline mb-4 text-center">
-            Resumen por Categoría
-          </h4>
-          {Object.keys(categoryTotals).length > 0 ? (
-             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                {Object.entries(categoryTotals).map(([category, totals]) => (
-                    <div key={category} className="p-4 bg-secondary/50 rounded-lg">
-                        <p className="font-bold text-center mb-2">{category}</p>
-                        <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Ingresos:</span>
-                            <span className="text-sm font-medium text-green-600">{formatCurrency(totals.income)}</span>
+            <h4 className="text-lg font-bold font-headline mb-4 text-center">
+                Resumen por Categoría
+            </h4>
+            {Object.keys(categoryTotals).length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                    {Object.entries(categoryTotals).map(([category, totals]) => (
+                        <div key={category} className="p-4 bg-secondary/50 rounded-lg">
+                            <p className="font-bold text-center mb-2">{category}</p>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">Ingresos:</span>
+                                <span className="text-sm font-medium text-green-600">{formatCurrency(totals.income)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-sm text-muted-foreground">Egresos:</span>
+                                <span className="text-sm font-medium text-red-600">{formatCurrency(totals.expense)}</span>
+                            </div>
+                            <Separator className="my-2" />
+                            <div className="flex justify-between font-bold">
+                                <span>Balance:</span>
+                                <span>{formatCurrency(totals.income - totals.expense)}</span>
+                            </div>
                         </div>
-                         <div className="flex justify-between">
-                            <span className="text-sm text-muted-foreground">Egresos:</span>
-                            <span className="text-sm font-medium text-red-600">{formatCurrency(totals.expense)}</span>
-                        </div>
-                        <Separator className="my-2" />
-                         <div className="flex justify-between font-bold">
-                            <span>Balance:</span>
-                            <span>{formatCurrency(totals.income - totals.expense)}</span>
-                        </div>
-                    </div>
-                ))}
-             </div>
-          ) : (
-            <p className="text-muted-foreground text-center mb-6">No hay datos de categorías para este período.</p>
-          )}
+                    ))}
+                </div>
+            ) : (
+                <p className="text-muted-foreground text-center mb-6">No hay datos de categorías para este período.</p>
+            )}
+          </div>
 
           <Separator className="my-6" />
 
