@@ -43,7 +43,7 @@ const formSchema = z.object({
     .max(100),
   day: z.coerce.number().int().min(1).max(31),
   month: z.coerce.number().int().min(1).max(12),
-  year: z.coerce.number().int().min(new Date().getFullYear() - 100).max(new Date().getFullYear() + 1),
+  year: z.coerce.number().int().min(2023).max(new Date().getFullYear() + 1),
 }).refine(data => {
     try {
         new Date(data.year, data.month - 1, data.day);
@@ -100,7 +100,8 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     });
   };
 
-  const years = Array.from({ length: 102 }, (_, i) => new Date().getFullYear() - 100 + i).reverse();
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 2023 + 2 }, (_, i) => 2023 + i).reverse();
   const months = Array.from({ length: 12 }, (_, i) => ({ value: i + 1, label: format(new Date(2000, i, 1), 'MMMM', { locale: es }) }));
   const days = Array.from({ length: 31 }, (_, i) => i + 1);
 
