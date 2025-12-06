@@ -1,12 +1,24 @@
-import { Banknote } from 'lucide-react';
+import { Banknote, LogOut } from 'lucide-react';
 import Image from 'next/image';
 import { CompanyProfile } from '@/lib/types';
+import { Button } from './ui/button';
+import { useAuth } from '@/firebase';
+import { signOut } from 'firebase/auth';
+import { useRouter } from 'next/navigation';
 
 type HeaderProps = {
   companyProfile: CompanyProfile | null;
 }
 
 export function Header({ companyProfile }: HeaderProps) {
+  const auth = useAuth();
+  const router = useRouter();
+
+  const handleSignOut = async () => {
+    await signOut(auth);
+    router.push('/admin/login');
+  };
+
   return (
     <header className="bg-card/80 backdrop-blur-sm border-b sticky top-0 z-10">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -23,6 +35,10 @@ export function Header({ companyProfile }: HeaderProps) {
               {companyProfile?.name || 'Contabilidad LoanStar'}
             </h1>
           </div>
+          <Button variant="ghost" onClick={handleSignOut}>
+            <LogOut className="mr-2 h-4 w-4" />
+            Cerrar Sesión
+          </Button>
         </div>
       </div>
     </header>
