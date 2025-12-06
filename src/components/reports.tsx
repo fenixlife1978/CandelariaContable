@@ -22,7 +22,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { TransactionsTable } from './transactions-table';
 import type { Transaction, MonthlyClosure, CompanyProfile } from '@/lib/types';
-import { FileDown, LockOpen, Banknote } from 'lucide-react';
+import { FileDown, Lock, LockOpen, Banknote } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, where, query, getDocs, doc } from 'firebase/firestore';
@@ -74,10 +74,18 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
 
     // Function to get the balance from the previous month.
-    const getPreviousMonthFinalBalance = (month: number, year: number) => {
+    const getPreviousMonthFinalBalance = (month: number, year: number): Decimal => {
         const previousMonthDate = subMonths(new Date(year, month), 1);
         const prevYear = getYear(previousMonthDate);
         const prevMonth = getMonth(previousMonthDate);
+
+        // Base case: For any date before Jan 2024, initial capital is 0.
+        if (year < 2024) {
+            return new Decimal(0);
+        }
+        if (year === 2024 && month === 0) { // Enero 2024
+            return new Decimal(0);
+        }
 
         // 1. Try to find a formal closure for the previous month.
         const closure = monthlyClosures.find(c => c.year === prevYear && c.month === prevMonth);
@@ -85,7 +93,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             return new Decimal(closure.finalBalance);
         }
 
-        // 2. If no closure, calculate the balance dynamically.
+        // 2. If no closure, calculate the balance dynamically from its own previous month.
         const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear); // Recursive call
         
         const transactionsForPrevMonth = allTransactions.filter(t => 
@@ -100,12 +108,6 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         return finalBalance;
     };
     
-    // For months before January 2024, the initial capital is 0, which is the base case for recursion.
-    const startOfTime = new Date(2024, 0); // Enero 2024
-    if (new Date(selectedYear, selectedMonth) < startOfTime) {
-      return { filteredTransactions, capitalInicial: 0, isClosed: isMonthClosed };
-    }
-
     const capitalInicialValue = getPreviousMonthFinalBalance(selectedMonth, selectedYear);
     
     return { 
@@ -208,8 +210,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       return;
     }
 
-    const closureData = {
-      id: closureId,
+    const closureData: Omit<MonthlyClosure, 'id'> = {
       month: selectedMonth,
       year: selectedYear,
       initialBalance: capitalInicial,
@@ -221,7 +222,10 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     };
 
     try {
-      await addDocumentNonBlocking(monthlyClosuresCollection, closureData);
+      // Use closureId for the document
+      const docRef = doc(firestore, 'monthlyClosures', closureId);
+      await addDocumentNonBlocking(docRef, closureData);
+      
       toast({
         title: 'Cierre Exitoso',
         description: `El mes de ${months[selectedMonth].label} ${selectedYear} ha sido cerrado.`,
@@ -311,6 +315,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
                 </Button>
             ) : (
                 <Button onClick={handleCloseMonth} disabled={isClosingMonth || isClosed} variant="secondary">
+                    <Lock className="mr-2 h-4 w-4" />
                     {isClosingMonth ? 'Cerrando...' : 'Cierre del Mes'}
                 </Button>
             )}
@@ -404,5 +409,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     </Card>
   );
 }
+
+    
 
     

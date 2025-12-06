@@ -24,7 +24,7 @@ export type Expense = {
 }
 
 export type MonthlyClosure = {
-  id: string;
+  id?: string;
   month: number;
   year: number;
   initialBalance: number;
@@ -44,3 +44,5 @@ export type CompanyProfile = {
   email?: string;
   logo?: string;
 }
+
+    
