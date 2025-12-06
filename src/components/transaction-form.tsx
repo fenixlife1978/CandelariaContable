@@ -47,7 +47,7 @@ const transactionCategories = [
 const presetDescriptions = [
   "Ingreso por Fiscalía",
   "Abono o Recuperación de Capital",
-  "Intereses Cobrados Al Mes",
+  "Intereses Cobrados",
   "Prestamos del Mes / Socios",
   "Prestamos / Candelaria",
 ];
@@ -144,8 +144,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
 
   const handlePresetSelect = (value: string) => {
     const currentValue = form.getValues('description');
-    const newValue = currentValue ? `${currentValue} ${value}` : value;
-    form.setValue('description', newValue);
+    form.setValue('description', value, { shouldValidate: true });
   };
 
   const currentYear = new Date().getFullYear();
