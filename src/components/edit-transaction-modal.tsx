@@ -207,9 +207,9 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
                     
                     <div className='space-y-2'>
                         <FormLabel>Concepto / Descripción</FormLabel>
-                        <Select onValueChange={(value) => form.setValue('description', value)} defaultValue={form.getValues('description')}>
+                        <Select onValueChange={(value) => form.setValue('description', value)}>
                             <SelectTrigger>
-                            <SelectValue placeholder="Selecciona un concepto o escribe abajo" />
+                            <SelectValue placeholder="Selecciona un concepto predeterminado" />
                             </SelectTrigger>
                             <SelectContent>
                             {presetDescriptions.map(desc => (
@@ -300,7 +300,7 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
                         )}
                         />
                     </div>
-                    <FormMessage>{form.formState.errors.day?.message || form.formState.errors.month?.message}</FormMessage>
+                    <FormMessage>{form.formState.errors.day?.message}</FormMessage>
                     </FormItem>
                     
                     <DialogFooter>
@@ -317,5 +317,3 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
     </Dialog>
   );
 }
-
-    

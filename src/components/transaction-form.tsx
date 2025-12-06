@@ -213,7 +213,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               <FormLabel>Concepto / Descripción</FormLabel>
               <Select onValueChange={(value) => form.setValue('description', value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona un concepto o escribe abajo" />
+                  <SelectValue placeholder="Selecciona un concepto predeterminado" />
                 </SelectTrigger>
                 <SelectContent>
                   {presetDescriptions.map(desc => (
@@ -242,7 +242,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Categoría</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Selecciona una categoría" />
@@ -304,7 +304,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                   )}
                 />
               </div>
-               <FormMessage>{form.formState.errors.day?.message || form.formState.errors.month?.message}</FormMessage>
+               <FormMessage>{form.formState.errors.day?.message}</FormMessage>
             </FormItem>
             
 
@@ -320,5 +320,3 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     </Card>
   );
 }
-
-    
