@@ -69,15 +69,23 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
 
 
   const { totalIncome, totalExpenses, capital } = useMemo(() => {
-    const totalIncomeValue = incomesData?.reduce(
+    const startDate = new Date('2025-01-01T00:00:00.000Z');
+    const now = new Date();
+
+    const filterDate = now >= startDate ? startDate : new Date(0); // Use epoch if before 2025
+
+    const relevantIncomes = incomesData?.filter(t => new Date(t.date) >= filterDate) || [];
+    const relevantExpenses = expensesData?.filter(t => new Date(t.date) >= filterDate) || [];
+
+    const totalIncomeValue = relevantIncomes.reduce(
       (sum, t) => sum.plus(new Decimal(t.amount)),
       new Decimal(0)
-    ) || new Decimal(0);
+    );
     
-    const totalExpensesValue = expensesData?.reduce(
+    const totalExpensesValue = relevantExpenses.reduce(
       (sum, t) => sum.plus(new Decimal(t.amount)),
       new Decimal(0)
-    ) || new Decimal(0);
+    );
 
     const capitalValue = totalIncomeValue.minus(totalExpensesValue);
 
