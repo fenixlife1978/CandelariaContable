@@ -79,26 +79,37 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     );
     
     if (!previousMonthClosure) {
-        const initialCapitalTransaction = transactionsForSelectedMonth.find(
-          t => t.category === "Capital Inicial" && t.type === 'income'
-        );
-
-        if (initialCapitalTransaction) {
-            capitalInicialValue = new Decimal(initialCapitalTransaction.amount);
-        } else {
-            const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
-            const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
-            const totalValue = transactionsBefore.reduce((acc, t) => {
+        const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
+        const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
+        
+        if (transactionsBefore.length > 0) {
+            const historicalBalance = transactionsBefore.reduce((acc, t) => {
                 const amount = new Decimal(t.amount);
-                return acc.plus(t.type === 'income' ? amount : amount.negated());
+                return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
             }, new Decimal(0));
-            capitalInicialValue = totalValue;
+            capitalInicialValue = historicalBalance;
+        } else {
+             const initialCapitalTransaction = transactionsForSelectedMonth.find(
+                t => t.category === "Capital Inicial" && t.type === 'income'
+            );
+            if (initialCapitalTransaction) {
+                capitalInicialValue = new Decimal(initialCapitalTransaction.amount);
+            }
         }
     }
 
     const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
 
-    const filtered = transactionsForSelectedMonth.filter(t => !(t.category === 'Capital Inicial' && t.type === 'income' && !previousMonthClosure));
+    const filtered = transactionsForSelectedMonth.filter(t => {
+        if (!previousMonthClosure) {
+             const isInitialCapital = t.category === 'Capital Inicial' && t.type === 'income';
+             const hasTransactionsBefore = allTransactions.some(tx => new Date(tx.date) < startOfMonth(new Date(selectedYear, selectedMonth)));
+             if (isInitialCapital && !hasTransactionsBefore) {
+                 return false;
+             }
+        }
+        return true;
+    });
     
     return { 
       filteredTransactions: filtered, 
@@ -366,4 +377,5 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   );
 
     
+
 
