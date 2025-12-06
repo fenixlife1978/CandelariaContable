@@ -72,24 +72,55 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
 
     const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
 
+    let capitalInicialValue = new Decimal(0);
+    
+    // Function to calculate balance for any given month before the selected one.
+    const getBalanceForMonth = (month: number, year: number) => {
+        // Find closure for the month before this one
+        const previousMonthOfGiven = subMonths(new Date(year, month), 1);
+        const prevYear = getYear(previousMonthOfGiven);
+        const prevMonth = getMonth(previousMonthOfGiven);
+        const closure = monthlyClosures.find(c => c.year === prevYear && c.month === prevMonth);
+
+        if (closure) {
+            return new Decimal(closure.finalBalance);
+        }
+        
+        // If no closure, calculate historically from the start of time until this month starts.
+        const startOfGivenMonth = startOfMonth(new Date(year, month));
+        const historicalTransactions = allTransactions.filter(t => new Date(t.date) < startOfGivenMonth);
+        const historicalBalance = historicalTransactions.reduce((acc, t) => {
+            const amount = new Decimal(t.amount);
+            return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
+        }, new Decimal(0));
+        return historicalBalance;
+    };
+    
     const previousMonthDate = subMonths(new Date(selectedYear, selectedMonth), 1);
     const previousMonthYear = getYear(previousMonthDate);
     const previousMonthMonth = getMonth(previousMonthDate);
 
     const previousMonthClosure = monthlyClosures.find(c => c.year === previousMonthYear && c.month === previousMonthMonth);
 
-    let capitalInicialValue = new Decimal(0);
     if (previousMonthClosure) {
       capitalInicialValue = new Decimal(previousMonthClosure.finalBalance);
     } else {
-      const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
-      const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
+      // If there is NO closure for the previous month, we must calculate its final balance.
+      // 1. Get the initial capital for the *previous* month.
+      const initialCapitalForPreviousMonth = getBalanceForMonth(previousMonthMonth, previousMonthYear);
       
-      const historicalBalance = transactionsBefore.reduce((acc, t) => {
+      // 2. Get transactions for the *previous* month.
+      const transactionsForPreviousMonth = allTransactions.filter(t => 
+        getMonth(t.date) === previousMonthMonth && getYear(t.date) === previousMonthYear
+      );
+
+      // 3. Calculate final balance for the *previous* month.
+      const finalBalanceOfPreviousMonth = transactionsForPreviousMonth.reduce((acc, t) => {
         const amount = new Decimal(t.amount);
         return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
-      }, new Decimal(0));
-      capitalInicialValue = historicalBalance;
+      }, initialCapitalForPreviousMonth);
+
+      capitalInicialValue = finalBalanceOfPreviousMonth;
     }
     
     return { filteredTransactions: transactionsForSelectedMonth, capitalInicial: capitalInicialValue.toNumber(), isClosed: isMonthClosed };
