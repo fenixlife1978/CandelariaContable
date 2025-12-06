@@ -51,6 +51,7 @@ export default function Dashboard() {
     const data = {
       description: transaction.description,
       amount: transaction.amount,
+      category: transaction.category,
       date: transaction.date.toISOString(),
     };
     if (transaction.type === 'income') {
@@ -75,8 +76,8 @@ export default function Dashboard() {
     }).format(amount);
   };
   
-  const incomesForSummary: Income[] = useMemo(() => incomesData?.map(i => ({ date: i.date, amount: i.amount, description: i.description, id: i.id })) || [], [incomesData]);
-  const expensesForSummary: Expense[] = useMemo(() => expensesData?.map(e => ({ date: e.date, amount: e.amount, description: e.description, id: e.id })) || [], [expensesData]);
+  const incomesForSummary: Income[] = useMemo(() => incomesData?.map(i => ({ ...i, id: i.id })) || [], [incomesData]);
+  const expensesForSummary: Expense[] = useMemo(() => expensesData?.map(e => ({ ...e, id: e.id })) || [], [expensesData]);
 
   const isLoading = incomesLoading || expensesLoading;
 

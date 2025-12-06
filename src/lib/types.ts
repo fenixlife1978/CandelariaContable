@@ -3,6 +3,7 @@ export type Transaction = {
   type: 'income' | 'expense';
   amount: number;
   description: string;
+  category: string;
   date: Date;
 };
 
@@ -11,6 +12,7 @@ export type Income = {
   date: string;
   amount: number;
   description: string;
+  category: string;
 }
 
 export type Expense = {
@@ -18,4 +20,5 @@ export type Expense = {
   date: string;
   amount: number;
   description: string;
+  category: string;
 }

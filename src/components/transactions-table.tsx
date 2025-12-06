@@ -55,6 +55,7 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency, isLo
               <TableRow>
                 <TableHead>Fecha</TableHead>
                 <TableHead>Descripción</TableHead>
+                <TableHead>Categoría</TableHead>
                 <TableHead>Tipo</TableHead>
                 <TableHead className="text-right">Monto</TableHead>
                 <TableHead className="w-[80px] text-right">Acciones</TableHead>
@@ -63,7 +64,7 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency, isLo
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
+                  <TableCell colSpan={6} className="text-center h-24">
                     <div className="flex justify-center items-center">
                       <Loader className="h-6 w-6 animate-spin" />
                     </div>
@@ -72,7 +73,7 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency, isLo
               )}
               {!isLoading && transactions.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center h-24">
+                  <TableCell colSpan={6} className="text-center h-24">
                     Aún no hay transacciones.
                   </TableCell>
                 </TableRow>
@@ -82,6 +83,7 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency, isLo
                   <TableCell className="hidden md:table-cell">{format(transaction.date, 'dd MMM, yyyy', { locale: es })}</TableCell>
                    <TableCell className="md:hidden table-cell">{format(transaction.date, 'dd/MM/yy', { locale: es })}</TableCell>
                   <TableCell className="font-medium max-w-[150px] truncate">{transaction.description}</TableCell>
+                  <TableCell>{transaction.category}</TableCell>
                   <TableCell>
                     <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'} className={cn(transaction.type === 'income' && 'bg-primary')}>
                       {transaction.type === 'income' ? 'Ingreso' : 'Egreso'}

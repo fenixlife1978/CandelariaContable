@@ -22,13 +22,18 @@
         "description": {
           "type": "string",
           "description": "Description of the income."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the transaction."
         }
       },
       "required": [
         "id",
         "date",
         "amount",
-        "description"
+        "description",
+        "category"
       ]
     },
     "Expense": {
@@ -53,13 +58,18 @@
         "description": {
           "type": "string",
           "description": "Description of the expense."
+        },
+        "category": {
+          "type": "string",
+          "description": "Category of the transaction."
         }
       },
       "required": [
         "id",
         "date",
         "amount",
-        "description"
+        "description",
+        "category"
       ]
     },
     "LoanSummary": {

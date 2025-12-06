@@ -33,6 +33,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 
+const transactionCategories = [
+  "Fiscalía",
+  "Capital Recuperado",
+  "Intereses Ganados",
+  "Préstamos Socios",
+  "Prestamos Candelaria",
+];
+
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
   amount: z.coerce.number().min(0.01, 'El monto debe ser mayor que 0'),
@@ -40,6 +48,7 @@ const formSchema = z.object({
     .string()
     .min(2, 'La descripción debe tener al menos 2 caracteres')
     .max(100),
+  category: z.string().min(1, "Debes seleccionar una categoría"),
   day: z.coerce.number().int().min(1).max(31),
   month: z.coerce.number().int().min(1).max(12),
   year: z.coerce.number().int().min(2023).max(new Date().getFullYear() + 1),
@@ -71,6 +80,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       type: 'income',
       amount: 0,
       description: '',
+      category: '',
       day: today.getDate(),
       month: today.getMonth() + 1,
       year: today.getFullYear(),
@@ -83,12 +93,14 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
         type: values.type,
         amount: values.amount,
         description: values.description,
+        category: values.category,
         date: date
     });
     form.reset({
       type: values.type,
       amount: 0,
       description: '',
+      category: '',
       day: today.getDate(),
       month: today.getMonth() + 1,
       year: today.getFullYear(),
@@ -172,6 +184,29 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                   <FormControl>
                     <Input placeholder="ej. Pago de préstamo" {...field} />
                   </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="category"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Categoría</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecciona una categoría" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {transactionCategories.map(category => (
+                        <SelectItem key={category} value={category}>{category}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

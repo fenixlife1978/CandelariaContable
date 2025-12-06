@@ -23,6 +23,7 @@ import { Button } from '@/components/ui/button';
 import { TransactionsTable } from './transactions-table';
 import type { Transaction } from '@/lib/types';
 import { FileDown } from 'lucide-react';
+import { Separator } from './ui/separator';
 
 type ReportsProps = {
   allTransactions: Transaction[];
@@ -58,17 +59,31 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
     });
   }, [allTransactions, selectedMonth, selectedYear]);
 
-  const { totalIncome, totalExpenses, balance } = useMemo(() => {
+  const { totalIncome, totalExpenses, balance, categoryTotals } = useMemo(() => {
     const income = filteredTransactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
     const expenses = filteredTransactions
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
+    
+    const categoryTotals = filteredTransactions.reduce((acc, t) => {
+        if (!acc[t.category]) {
+            acc[t.category] = { income: 0, expense: 0 };
+        }
+        if (t.type === 'income') {
+            acc[t.category].income += t.amount;
+        } else {
+            acc[t.category].expense += t.amount;
+        }
+        return acc;
+    }, {} as Record<string, { income: number; expense: number }>);
+
     return {
       totalIncome: income,
       totalExpenses: expenses,
       balance: income - expenses,
+      categoryTotals
     };
   }, [filteredTransactions]);
 
@@ -166,7 +181,42 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
               <p className="text-lg font-bold">{formatCurrency(balance)}</p>
             </div>
           </div>
+          
+          <Separator className="my-6" />
 
+          <h4 className="text-lg font-bold font-headline mb-4 text-center">
+            Resumen por Categoría
+          </h4>
+          {Object.keys(categoryTotals).length > 0 ? (
+             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {Object.entries(categoryTotals).map(([category, totals]) => (
+                    <div key={category} className="p-4 bg-secondary/50 rounded-lg">
+                        <p className="font-bold text-center mb-2">{category}</p>
+                        <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Ingresos:</span>
+                            <span className="text-sm font-medium text-green-600">{formatCurrency(totals.income)}</span>
+                        </div>
+                         <div className="flex justify-between">
+                            <span className="text-sm text-muted-foreground">Egresos:</span>
+                            <span className="text-sm font-medium text-red-600">{formatCurrency(totals.expense)}</span>
+                        </div>
+                        <Separator className="my-2" />
+                         <div className="flex justify-between font-bold">
+                            <span>Balance:</span>
+                            <span>{formatCurrency(totals.income - totals.expense)}</span>
+                        </div>
+                    </div>
+                ))}
+             </div>
+          ) : (
+            <p className="text-muted-foreground text-center mb-6">No hay datos de categorías para este período.</p>
+          )}
+
+          <Separator className="my-6" />
+
+          <h4 className="text-lg font-bold font-headline mb-4 text-center">
+            Detalle de Transacciones
+          </h4>
           <TransactionsTable
             transactions={filteredTransactions}
             onDelete={() => {}} 
