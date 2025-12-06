@@ -69,28 +69,31 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
 
 
   const { totalIncome, totalExpenses, capital } = useMemo(() => {
-    const totalIncomeValue = incomesData
-      ? incomesData.reduce(
-          (sum, t) => sum.plus(new Decimal(t.amount)),
-          new Decimal(0)
-        )
-      : new Decimal(0);
-    
-    const totalExpensesValue = expensesData
-      ? expensesData.reduce(
-          (sum, t) => sum.plus(new Decimal(t.amount)),
-          new Decimal(0)
-        )
-      : new Decimal(0);
+    const today = new Date();
+    const isAfterCutoff = today.getFullYear() >= 2025;
+    const cutoffDate = isAfterCutoff ? new Date('2025-01-01T00:00:00.000Z') : new Date('1970-01-01T00:00:00.000Z');
+
+    const relevantIncomes = incomesData?.filter(i => new Date(i.date) >= cutoffDate) || [];
+    const relevantExpenses = expensesData?.filter(e => new Date(e.date) >= cutoffDate) || [];
+
+    const totalIncomeValue = relevantIncomes.reduce(
+        (sum, t) => sum.plus(new Decimal(t.amount)),
+        new Decimal(0)
+    );
+
+    const totalExpensesValue = relevantExpenses.reduce(
+        (sum, t) => sum.plus(new Decimal(t.amount)),
+        new Decimal(0)
+    );
 
     const capitalValue = totalIncomeValue.minus(totalExpensesValue);
 
-    return { 
-      totalIncome: totalIncomeValue.toNumber(), 
-      totalExpenses: totalExpensesValue.toNumber(), 
-      capital: capitalValue.toNumber()
+    return {
+      totalIncome: totalIncomeValue.toNumber(),
+      totalExpenses: totalExpensesValue.toNumber(),
+      capital: capitalValue.toNumber(),
     };
-  }, [incomesData, expensesData]);
+}, [incomesData, expensesData]);
   
   const addTransaction = (transaction: Omit<Transaction, 'id' | 'date'> & { date: Date }) => {
     const data = {
@@ -156,7 +159,7 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalIncome)}</div>
-            <p className="text-xs text-muted-foreground">de {incomesData?.length || 0} transacciones</p>
+            <p className="text-xs text-muted-foreground">de {incomesData?.filter(i => new Date(i.date) >= (new Date().getFullYear() >= 2025 ? new Date('2025-01-01') : new Date(0))).length || 0} transacciones</p>
           </CardContent>
         </Card>
         <Card>
@@ -166,7 +169,7 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{formatCurrency(totalExpenses)}</div>
-            <p className="text-xs text-muted-foreground">de {expensesData?.length || 0} transacciones</p>
+            <p className="text-xs text-muted-foreground">de {expensesData?.filter(e => new Date(e.date) >= (new Date().getFullYear() >= 2025 ? new Date('2025-01-01') : new Date(0))).length || 0} transacciones</p>
           </CardContent>
         </Card>
         <Card className="bg-primary text-primary-foreground">
@@ -216,3 +219,5 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
     </div>
   );
 }
+
+    
