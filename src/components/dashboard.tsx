@@ -48,10 +48,15 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
 
 
   const { totalIncome, totalExpenses, capital } = useMemo(() => {
-    const totalIncome = incomesData?.reduce((sum, t) => sum + t.amount, 0) || 0;
-    const totalExpenses = expensesData?.reduce((sum, t) => sum + t.amount, 0) || 0;
-    const capital = totalIncome - totalExpenses;
-    return { totalIncome, totalExpenses, capital };
+    const totalIncomeInCents = incomesData?.reduce((sum, t) => sum + Math.round(t.amount * 100), 0) || 0;
+    const totalExpensesInCents = expensesData?.reduce((sum, t) => sum + Math.round(t.amount * 100), 0) || 0;
+    const capitalInCents = totalIncomeInCents - totalExpensesInCents;
+    
+    return { 
+      totalIncome: totalIncomeInCents / 100, 
+      totalExpenses: totalExpensesInCents / 100, 
+      capital: capitalInCents / 100 
+    };
   }, [incomesData, expensesData]);
   
   const addTransaction = (transaction: Omit<Transaction, 'id' | 'date'> & { date: Date }) => {
@@ -93,6 +98,8 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
     return new Intl.NumberFormat('es-ES', {
       style: 'currency',
       currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
   

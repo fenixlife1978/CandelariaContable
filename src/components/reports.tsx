@@ -88,9 +88,11 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         // If no "Capital Inicial" transaction found in the current month, calculate from all previous transactions
         const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
         const transactionsBefore = allTransactions.filter(t => new Date(t.date) < startOfSelectedMonth);
-        capitalInicial = transactionsBefore.reduce((acc, t) => {
-            return acc + (t.type === 'income' ? t.amount : -t.amount);
+        const totalInCents = transactionsBefore.reduce((acc, t) => {
+            const amountInCents = Math.round(t.amount * 100);
+            return acc + (t.type === 'income' ? amountInCents : -amountInCents);
         }, 0);
+        capitalInicial = totalInCents / 100;
       }
     }
     
@@ -103,33 +105,41 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
 
   const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
-    const income = filteredTransactions
+    const incomeInCents = filteredTransactions
       .filter(t => t.type === 'income')
-      .reduce((sum, t) => sum + t.amount, 0);
-    const expenses = filteredTransactions
+      .reduce((sum, t) => sum + Math.round(t.amount * 100), 0);
+    const expensesInCents = filteredTransactions
       .filter(t => t.type === 'expense')
-      .reduce((sum, t) => sum + t.amount, 0);
+      .reduce((sum, t) => sum + Math.round(t.amount * 100), 0);
     
-    const categoryTotals = filteredTransactions.reduce((acc, t) => {
+    const categoryTotalsInCents = filteredTransactions.reduce((acc, t) => {
         if (!acc[t.category]) {
             acc[t.category] = { income: 0, expense: 0 };
         }
+        const amountInCents = Math.round(t.amount * 100);
         if (t.type === 'income') {
-            acc[t.category].income += t.amount;
+            acc[t.category].income += amountInCents;
         } else {
-            acc[t.category].expense += t.amount;
+            acc[t.category].expense += amountInCents;
         }
         return acc;
     }, {} as Record<string, { income: number; expense: number }>);
     
-    const currentMonthBalance = income - expenses;
+    const categoryTotals = Object.entries(categoryTotalsInCents).reduce((acc, [key, value]) => {
+      acc[key] = { income: value.income / 100, expense: value.expense / 100 };
+      return acc;
+    }, {} as Record<string, { income: number; expense: number }>);
+
+    const currentMonthBalanceInCents = incomeInCents - expensesInCents;
+    const capitalInicialInCents = Math.round(capitalInicial * 100);
+    const capitalFinalInCents = capitalInicialInCents + currentMonthBalanceInCents;
 
     return {
-      totalIncome: income,
-      totalExpenses: expenses,
-      balance: currentMonthBalance,
+      totalIncome: incomeInCents / 100,
+      totalExpenses: expensesInCents / 100,
+      balance: currentMonthBalanceInCents / 100,
       categoryTotals,
-      capitalFinal: capitalInicial + currentMonthBalance,
+      capitalFinal: capitalFinalInCents / 100,
     };
   }, [filteredTransactions, capitalInicial]);
 
