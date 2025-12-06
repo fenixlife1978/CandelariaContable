@@ -158,7 +158,7 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
               <p className="text-lg font-bold text-green-600">{formatCurrency(totalIncome)}</p>
             </div>
             <div className="p-4 bg-secondary rounded-lg">
-              <p className="text-sm text-muted-foreground">Gastos del Mes</p>
+              <p className="text-sm text-muted-foreground">Egresos del Mes</p>
               <p className="text-lg font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
             </div>
             <div className="p-4 bg-secondary rounded-lg">

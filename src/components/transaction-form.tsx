@@ -69,7 +69,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       type: 'income',
-      amount: undefined,
+      amount: 0,
       description: '',
       day: today.getDate(),
       month: today.getMonth() + 1,
@@ -87,7 +87,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     });
     form.reset({
       type: values.type,
-      amount: undefined,
+      amount: 0,
       description: '',
       day: today.getDate(),
       month: today.getMonth() + 1,
@@ -133,7 +133,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                         <FormControl>
                           <RadioGroupItem value="expense" />
                         </FormControl>
-                        <FormLabel className="font-normal">Gasto</FormLabel>
+                        <FormLabel className="font-normal">Egreso</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>

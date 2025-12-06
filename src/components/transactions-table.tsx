@@ -46,7 +46,7 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency, isLo
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Transacciones Recientes</CardTitle>
-        <CardDescription>Un registro de todos tus ingresos y gastos.</CardDescription>
+        <CardDescription>Un registro de todos tus ingresos y egresos.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="border rounded-md">
@@ -84,7 +84,7 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency, isLo
                   <TableCell className="font-medium max-w-[150px] truncate">{transaction.description}</TableCell>
                   <TableCell>
                     <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'} className={cn(transaction.type === 'income' && 'bg-primary')}>
-                      {transaction.type === 'income' ? 'Ingreso' : 'Gasto'}
+                      {transaction.type === 'income' ? 'Ingreso' : 'Egreso'}
                     </Badge>
                   </TableCell>
                   <TableCell

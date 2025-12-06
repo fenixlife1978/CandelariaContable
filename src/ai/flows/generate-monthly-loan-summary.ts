@@ -24,12 +24,12 @@ const GenerateMonthlyLoanSummaryInputSchema = z.object({
   expenses: z
     .array(
       z.object({
-        date: z.string().describe('La fecha del gasto.'),
-        amount: z.number().describe('El monto del gasto.'),
-        description: z.string().describe('La descripción del gasto.'),
+        date: z.string().describe('La fecha del egreso.'),
+        amount: z.number().describe('El monto del egreso.'),
+        description: z.string().describe('La descripción del egreso.'),
       })
     )
-    .describe('Un arreglo de entradas de gastos.'),
+    .describe('Un arreglo de entradas de egresos.'),
   capital: z.number().describe('El capital actual.'),
   financialBenchmarks: z
     .string()
@@ -71,7 +71,7 @@ Ingresos:
   - Fecha: {{date}}, Monto: {{amount}}, Descripción: {{description}}
 {{/each}}
 
-Gastos:
+Egresos:
 {{#each expenses}}
   - Fecha: {{date}}, Monto: {{amount}}, Descripción: {{description}}
 {{/each}}
