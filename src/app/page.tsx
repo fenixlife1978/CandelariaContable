@@ -2,7 +2,7 @@
 
 import Dashboard from '@/components/dashboard';
 import { Header } from '@/components/header';
-import { useUser, useAuth, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useEffect } from 'react';
 import { CompanyProfile } from '@/lib/types';
 import { doc } from 'firebase/firestore';
@@ -13,7 +13,11 @@ export default function Home() {
   const firestore = useFirestore();
   const router = useRouter();
 
-  const companyProfileRef = useMemoFirebase(() => doc(firestore, 'companyProfile', 'main'), [firestore]);
+  // Only create the document reference if the user is authenticated
+  const companyProfileRef = useMemoFirebase(
+    () => (user ? doc(firestore, 'companyProfile', 'main') : null),
+    [firestore, user]
+  );
   const { data: companyProfile, isLoading: isProfileLoading } = useDoc<CompanyProfile>(companyProfileRef);
 
   useEffect(() => {
@@ -22,10 +26,20 @@ export default function Home() {
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || isProfileLoading || !user) {
+  // The loading condition now checks for isUserLoading first, and then isProfileLoading only if there's a user.
+  if (isUserLoading || (user && isProfileLoading)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-lg">Cargando...</div>
+      </div>
+    );
+  }
+
+  // If there's no user after loading, the useEffect will redirect, but we can return null or a loader to prevent rendering the main content.
+  if (!user) {
+    return (
+       <div className="flex items-center justify-center min-h-screen">
+        <div className="text-lg">Redirigiendo...</div>
       </div>
     );
   }
