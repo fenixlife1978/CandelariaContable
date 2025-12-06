@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import type { Transaction, CompanyProfile } from '@/lib/types';
 import {
   Card,
@@ -14,12 +14,13 @@ import { TransactionForm } from './transaction-form';
 import { TransactionsTable } from './transactions-table';
 import { AiSummaryModal } from './ai-summary-modal';
 import type { Income, Expense, MonthlyClosure } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, doc } from 'firebase/firestore';
 import { Reports } from './reports';
 import { Configuration } from './configuration';
 import Decimal from 'decimal.js';
+import { getAuth } from 'firebase/auth';
 
 type DashboardProps = {
   companyProfile: CompanyProfile | null;
@@ -27,6 +28,25 @@ type DashboardProps = {
 
 export default function Dashboard({ companyProfile }: DashboardProps) {
   const firestore = useFirestore();
+  const { user } = useUser();
+
+  useEffect(() => {
+    if (user) {
+      // Forzar refresco del token para obtener los claims nuevos
+      user.getIdToken(true).then((token) => {
+        console.log("Nuevo token con claims:", token);
+      });
+
+      user.getIdTokenResult(true).then((idTokenResult) => {
+        console.log("Claims:", idTokenResult.claims);
+        if (idTokenResult.claims.admin) {
+          console.log("✅ Usuario es admin");
+        } else {
+          console.log("❌ Usuario NO es admin");
+        }
+      });
+    }
+  }, [user]);
 
   const incomesCollection = useMemoFirebase(() => collection(firestore, 'incomes'), [firestore]);
   const expensesCollection = useMemoFirebase(() => collection(firestore, 'expenses'), [firestore]);
