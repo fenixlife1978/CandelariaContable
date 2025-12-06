@@ -25,7 +25,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import type { Transaction } from '@/lib/types';
-import { useEffect, useState } from 'react';
 import {
   Select,
   SelectContent,
@@ -46,8 +45,8 @@ const formSchema = z.object({
   year: z.coerce.number().int().min(2023).max(new Date().getFullYear() + 1),
 }).refine(data => {
     try {
-        new Date(data.year, data.month - 1, data.day);
-        return true;
+        const date = new Date(data.year, data.month - 1, data.day);
+        return date.getFullYear() === data.year && date.getMonth() === data.month - 1 && date.getDate() === data.day;
     } catch {
         return false;
     }
@@ -70,17 +69,13 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       type: 'income',
+      amount: undefined,
       description: '',
       day: today.getDate(),
       month: today.getMonth() + 1,
       year: today.getFullYear(),
     },
   });
-
-  const [isClient, setIsClient] = useState(false);
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
     const date = new Date(values.year, values.month - 1, values.day);
@@ -158,6 +153,8 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                       type="number"
                       placeholder="0.00"
                       {...field}
+                      onChange={(e) => field.onChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      value={field.value ?? ''}
                       step="0.01"
                     />
                   </FormControl>
