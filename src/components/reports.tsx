@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef } from 'react';
-import { format, getMonth, getYear } from 'date-fns';
+import { format, getMonth, getYear, startOfMonth, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -50,16 +50,25 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
     label: format(new Date(2000, i, 1), 'LLLL', { locale: es }),
   }));
 
-  const filteredTransactions = useMemo(() => {
-    return allTransactions.filter(transaction => {
+  const { filteredTransactions, capitalInicial } = useMemo(() => {
+    const startOfSelectedMonth = startOfMonth(new Date(selectedYear, selectedMonth));
+    
+    const transactionsBefore = allTransactions.filter(t => t.date < startOfSelectedMonth);
+    const capitalInicial = transactionsBefore.reduce((acc, t) => {
+        return acc + (t.type === 'income' ? t.amount : -t.amount);
+    }, 0);
+
+    const filtered = allTransactions.filter(transaction => {
       return (
         getMonth(transaction.date) === selectedMonth &&
         getYear(transaction.date) === selectedYear
       );
     });
+
+    return { filteredTransactions: filtered, capitalInicial };
   }, [allTransactions, selectedMonth, selectedYear]);
 
-  const { totalIncome, totalExpenses, balance, categoryTotals } = useMemo(() => {
+  const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
     const income = filteredTransactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
@@ -78,14 +87,17 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
         }
         return acc;
     }, {} as Record<string, { income: number; expense: number }>);
+    
+    const currentMonthBalance = income - expenses;
 
     return {
       totalIncome: income,
       totalExpenses: expenses,
-      balance: income - expenses,
-      categoryTotals
+      balance: currentMonthBalance,
+      categoryTotals,
+      capitalFinal: capitalInicial + currentMonthBalance,
     };
-  }, [filteredTransactions]);
+  }, [filteredTransactions, capitalInicial]);
 
   const handleGeneratePdf = async () => {
     if (!reportRef.current) return;
@@ -167,7 +179,11 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
           <h3 className="text-xl font-bold font-headline mb-4 text-center">
             Reporte de {months[selectedMonth].label} {selectedYear}
           </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6 text-center">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 text-center">
+            <div className="p-4 bg-secondary rounded-lg">
+              <p className="text-sm text-muted-foreground">Capital Inicial</p>
+              <p className="text-lg font-bold">{formatCurrency(capitalInicial)}</p>
+            </div>
             <div className="p-4 bg-secondary rounded-lg">
               <p className="text-sm text-muted-foreground">Ingresos del Mes</p>
               <p className="text-lg font-bold text-green-600">{formatCurrency(totalIncome)}</p>
@@ -176,9 +192,9 @@ export function Reports({ allTransactions, formatCurrency, isLoading }: ReportsP
               <p className="text-sm text-muted-foreground">Egresos del Mes</p>
               <p className="text-lg font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
             </div>
-            <div className="p-4 bg-secondary rounded-lg">
-              <p className="text-sm text-muted-foreground">Balance del Mes</p>
-              <p className="text-lg font-bold">{formatCurrency(balance)}</p>
+             <div className="p-4 bg-secondary rounded-lg">
+              <p className="text-sm text-muted-foreground">Capital Final</p>
+              <p className="text-lg font-bold">{formatCurrency(capitalFinal)}</p>
             </div>
           </div>
           
