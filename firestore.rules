@@ -1,29 +1,27 @@
 /**
- * This ruleset implements an "Authenticated Universal Access" model.
+ * This ruleset implements a role-based access control model where only
+ * administrators have write privileges.
  *
  * Core Philosophy:
- * The security model is intentionally permissive, granting any authenticated user
- * full administrative privileges across the entire database. The primary security
- * boundary is user authentication; if a user is signed in, they are trusted
- * completely. Unauthenticated access is fully denied.
+ * The security model grants universal read access to authenticated users, but
+ * restricts all data modification (create, update, delete) to users who have
+ * a custom claim `admin: true` on their authentication token. Unauthenticated
+ * access is fully denied, except for reading the company profile.
  *
  * Data Structure:
- * The data is organized into flat, top-level collections for incomes, expenses,
- * and loan summaries. There is no user-specific nesting or data ownership,
- * reflecting the universal access model.
+ * The data is organized into flat, top-level collections. There is no
+ * user-specific nesting, as the access control is based on roles, not ownership.
  *
  * Key Security Decisions:
- * - Universal Permissions: Any user who has successfully signed in can read, create,
- *   update, and delete any document in any collection.
- * - No Ownership: The concept of document ownership is intentionally omitted.
- *   This allows any authenticated user to manage all data.
- * - Authentication is the Only Gate: The single check for all operations is
- *   whether the user is signed in (`request.auth != null`).
+ * - Admin-Only Writes: Any user attempting to create, update, or delete a document
+ *   in any collection must be an administrator.
+ * - Authenticated Reads: Any authenticated user can read data from the main
+ *   collections. The company profile is publicly readable for the login page.
+ * - Role-Based Control: The primary check for write operations is `isAdmin()`,
+ *   which inspects the custom claims on the user's token.
  *
- * WARNING: This model is suitable for applications where all users are
- * trusted administrators or for early-stage prototypes. It is not recommended
- * for multi-tenant applications with untrusted users, as there is no data
- * isolation between users.
+ * WARNING: This model assumes that custom claims are being securely set and managed
+ * via a trusted server environment (e.g., Cloud Functions).
  *
  * Force redeploy: 2024-08-01 12:00:00 UTC
  */
@@ -36,11 +34,18 @@ service cloud.firestore {
     // ----------------------------------------------------------------------
 
     /**
-     * Checks if the user is authenticated. This is the primary security
-     * gate for the entire database.
+     * Checks if the user is authenticated.
      */
     function isSignedIn() {
       return request.auth != null;
+    }
+
+    /**
+     * Checks if the authenticated user has the 'admin' custom claim.
+     * This is the primary gate for all write operations.
+     */
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
     }
 
     // ----------------------------------------------------------------------
@@ -48,59 +53,48 @@ service cloud.firestore {
     // ----------------------------------------------------------------------
 
     /**
-     * @description Allows any authenticated user to manage income records.
+     * @description Allows authenticated users to read, but only admins to write.
      * @path /incomes/{incomeId}
-     * @allow An authenticated user `(auth.uid: 'user_abc')` can create an income record `(create)`.
-     * @deny An unauthenticated user `(auth: null)` is denied from reading any income record `(get)`.
-     * @principle Enforces a single security boundary: the user must be signed in.
      */
     match /incomes/{incomeId} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     /**
-     * @description Allows any authenticated user to manage expense records.
+     * @description Allows authenticated users to read, but only admins to write.
      * @path /expenses/{expenseId}
-     * @allow An authenticated user `(auth.uid: 'user_xyz')` can delete any expense record `(delete)`.
-     * @deny An unauthenticated user `(auth: null)` is denied from listing expense records `(list)`.
-     * @principle Enforces a single security boundary: the user must be signed in.
      */
     match /expenses/{expenseId} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     /**
-     * @description Allows any authenticated user to manage AI-generated loan summaries.
+     * @description Allows authenticated users to read, but only admins to write.
      * @path /loanSummaries/{loanSummaryId}
-     * @allow An authenticated user `(auth.uid: 'user_123')` can update any loan summary `(update)`.
-     * @deny An unauthenticated user `(auth: null)` is denied from creating a loan summary `(create)`.
-     * @principle Enforces a single security boundary: the user must be signed in.
      */
     match /loanSummaries/{loanSummaryId} {
-      allow read, write: if isSignedIn();
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
     }
 
     /**
-     * @description Allows any authenticated user to manage monthly financial closures.
+     * @description Allows authenticated users to read, but only admins to write.
      * @path /monthlyClosures/{closureId}
-     * @allow An authenticated user `(auth.uid: 'user_456')` can create a new monthly closure record.
-     * @deny An unauthenticated user `(auth: null)` is denied from reading any closure record.
-     * @principle Enforces a single security boundary: the user must be signed in.
      */
     match /monthlyClosures/{closureId} {
-        allow read, write: if isSignedIn();
+        allow read: if isSignedIn();
+        allow write: if isAdmin();
     }
     
     /**
-     * @description Allows any user to read the company profile, but only authenticated users to write.
+     * @description Allows any user to read the company profile, but only admins to write.
      * @path /companyProfile/{profileId}
-     * @allow An unauthenticated user `(auth: null)` can read the company profile for the login page.
-     * @allow An authenticated user `(auth.uid: 'user_789')` can create and update the company profile.
-     * @deny An unauthenticated user `(auth: null)` is denied from writing the company profile.
      */
     match /companyProfile/{profileId} {
       allow read: if true;
-      allow write: if isSignedIn();
+      allow write: if isAdmin();
     }
   }
 }
