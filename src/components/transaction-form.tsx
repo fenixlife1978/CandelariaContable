@@ -3,7 +3,7 @@
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format } from 'date-fns';
+import { format, getDaysInMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -32,6 +32,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { useWatch } from 'react-hook-form';
+import React from 'react';
 
 const transactionCategories = [
   "Fiscalía",
@@ -50,19 +52,48 @@ const formSchema = z.object({
     .min(2, 'La descripción debe tener al menos 2 caracteres')
     .max(100),
   category: z.string().min(1, "Debes seleccionar una categoría"),
+  day: z.coerce.number().int().min(1).max(31),
   month: z.coerce.number().int().min(1).max(12),
   year: z.coerce.number().int().min(2023).max(new Date().getFullYear() + 1),
+}).refine(data => {
+    const daysInMonth = getDaysInMonth(new Date(data.year, data.month - 1));
+    return data.day <= daysInMonth;
+}, {
+    message: "El día no es válido para el mes seleccionado",
+    path: ["day"],
 });
-
-
-type TransactionFormValues = Omit<Transaction, 'id' | 'date'> & {
-    month: number;
-    year: number;
-}
 
 type TransactionFormProps = {
   onSubmit: (transaction: Omit<Transaction, 'id'>) => void;
 };
+
+function DaySelector({ control, year, month }: { control: any, year: number, month: number }) {
+  const daysInMonth = getDaysInMonth(new Date(year, month - 1));
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  return (
+      <FormField
+        control={control}
+        name="day"
+        render={({ field }) => (
+          <FormItem>
+            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Día" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {days.map((day) => (
+                  <SelectItem key={day} value={String(day)}>{day}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )}
+      />
+  )
+}
 
 export function TransactionForm({ onSubmit }: TransactionFormProps) {
   const today = new Date();
@@ -73,13 +104,17 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       amount: undefined,
       description: '',
       category: '',
+      day: today.getDate(),
       month: today.getMonth() + 1,
       year: today.getFullYear(),
     },
   });
 
+  const watchedYear = useWatch({ control: form.control, name: 'year' });
+  const watchedMonth = useWatch({ control: form.control, name: 'month' });
+
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    const date = new Date(values.year, values.month - 1, 1);
+    const date = new Date(values.year, values.month - 1, values.day);
     onSubmit({
         type: values.type,
         amount: values.amount,
@@ -92,6 +127,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
       amount: undefined,
       description: '',
       category: '',
+      day: today.getDate(),
       month: today.getMonth() + 1,
       year: today.getFullYear(),
     });
@@ -155,7 +191,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                       placeholder="0.00"
                       {...field}
                       onChange={(e) => field.onChange(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      value={field.value ?? ''}
+                      value={field.value === undefined ? '' : field.value}
                       step="0.01"
                     />
                   </FormControl>
@@ -203,7 +239,8 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
 
             <FormItem>
               <FormLabel>Fecha</FormLabel>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
+                <DaySelector control={form.control} year={watchedYear} month={watchedMonth} />
                 <FormField
                   control={form.control}
                   name="month"
@@ -245,7 +282,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                   )}
                 />
               </div>
-               <FormMessage>{form.formState.errors.month?.message}</FormMessage>
+               <FormMessage>{form.formState.errors.day?.message || form.formState.errors.month?.message}</FormMessage>
             </FormItem>
             
 

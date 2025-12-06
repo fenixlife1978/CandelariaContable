@@ -1,9 +1,9 @@
 'use client';
 
 import { z } from 'zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { format, getMonth, getYear } from 'date-fns';
+import { format, getMonth, getYear, getDate, getDaysInMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -51,10 +51,44 @@ const formSchema = z.object({
     .min(2, 'La descripción debe tener al menos 2 caracteres')
     .max(100),
   category: z.string().min(1, "Debes seleccionar una categoría"),
+  day: z.coerce.number().int().min(1).max(31),
   month: z.coerce.number().int().min(1).max(12),
   year: z.coerce.number().int().min(2023).max(new Date().getFullYear() + 1),
+}).refine(data => {
+    const daysInMonth = getDaysInMonth(new Date(data.year, data.month - 1));
+    return data.day <= daysInMonth;
+}, {
+    message: "El día no es válido para el mes seleccionado",
+    path: ["day"],
 });
 
+function DaySelector({ control, year, month }: { control: any, year: number, month: number }) {
+  const daysInMonth = getDaysInMonth(new Date(year, month - 1));
+  const days = Array.from({ length: daysInMonth }, (_, i) => i + 1);
+
+  return (
+      <FormField
+        control={control}
+        name="day"
+        render={({ field }) => (
+          <FormItem>
+            <Select onValueChange={(value) => field.onChange(parseInt(value))} value={String(field.value)}>
+              <FormControl>
+                <SelectTrigger>
+                  <SelectValue placeholder="Día" />
+                </SelectTrigger>
+              </FormControl>
+              <SelectContent>
+                {days.map((day) => (
+                  <SelectItem key={day} value={String(day)}>{day}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormItem>
+        )}
+      />
+  )
+}
 
 type EditTransactionModalProps = {
   transaction: Transaction;
@@ -71,13 +105,17 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
       amount: transaction.amount,
       description: transaction.description,
       category: transaction.category,
+      day: getDate(transaction.date),
       month: getMonth(transaction.date) + 1,
       year: getYear(transaction.date),
     },
   });
 
+  const watchedYear = useWatch({ control: form.control, name: 'year' });
+  const watchedMonth = useWatch({ control: form.control, name: 'month' });
+
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
-    const date = new Date(values.year, values.month - 1, 1);
+    const date = new Date(values.year, values.month - 1, values.day);
     onUpdate({
         ...transaction,
         type: values.type,
@@ -198,7 +236,8 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
 
                     <FormItem>
                     <FormLabel>Fecha</FormLabel>
-                    <div className="grid grid-cols-2 gap-2">
+                    <div className="grid grid-cols-3 gap-2">
+                        <DaySelector control={form.control} year={watchedYear} month={watchedMonth} />
                         <FormField
                         control={form.control}
                         name="month"
@@ -240,7 +279,7 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
                         )}
                         />
                     </div>
-                    <FormMessage>{form.formState.errors.month?.message}</FormMessage>
+                    <FormMessage>{form.formState.errors.day?.message || form.formState.errors.month?.message}</FormMessage>
                     </FormItem>
                     
                     <DialogFooter>
