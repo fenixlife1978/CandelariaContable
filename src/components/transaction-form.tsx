@@ -39,6 +39,7 @@ const transactionCategories = [
   "Intereses Ganados",
   "Préstamos Socios",
   "Prestamos Candelaria",
+  "Capital Inicial",
 ];
 
 const formSchema = z.object({
@@ -78,7 +79,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     resolver: zodResolver(formSchema),
     defaultValues: {
       type: 'income',
-      amount: 0,
+      amount: undefined,
       description: '',
       category: '',
       day: today.getDate(),
@@ -98,7 +99,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
     });
     form.reset({
       type: values.type,
-      amount: 0,
+      amount: undefined,
       description: '',
       category: '',
       day: today.getDate(),

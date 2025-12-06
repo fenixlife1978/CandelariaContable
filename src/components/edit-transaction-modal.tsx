@@ -40,6 +40,7 @@ const transactionCategories = [
   "Intereses Ganados",
   "Préstamos Socios",
   "Prestamos Candelaria",
+  "Capital Inicial",
 ];
 
 const formSchema = z.object({
