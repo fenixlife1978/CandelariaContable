@@ -32,6 +32,7 @@ import {
 import { cn } from '@/lib/utils';
 import type { Transaction } from '@/lib/types';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 
 type TransactionsTableProps = {
   transactions: Transaction[];
@@ -43,37 +44,37 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency }: Tr
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">Recent Transactions</CardTitle>
-        <CardDescription>A log of all your income and expenses.</CardDescription>
+        <CardTitle className="font-headline">Transacciones Recientes</CardTitle>
+        <CardDescription>Un registro de todos tus ingresos y gastos.</CardDescription>
       </CardHeader>
       <CardContent>
         <div className="border rounded-md">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead className="text-right">Amount</TableHead>
-                <TableHead className="w-[80px] text-right">Actions</TableHead>
+                <TableHead>Fecha</TableHead>
+                <TableHead>Descripción</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead className="text-right">Monto</TableHead>
+                <TableHead className="w-[80px] text-right">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {transactions.length === 0 && (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center h-24">
-                    No transactions yet.
+                    Aún no hay transacciones.
                   </TableCell>
                 </TableRow>
               )}
               {transactions.map((transaction) => (
                 <TableRow key={transaction.id}>
-                  <TableCell className="hidden md:table-cell">{format(transaction.date, 'dd MMM, yyyy')}</TableCell>
-                   <TableCell className="md:hidden table-cell">{format(transaction.date, 'dd/MM/yy')}</TableCell>
+                  <TableCell className="hidden md:table-cell">{format(transaction.date, 'dd MMM, yyyy', { locale: es })}</TableCell>
+                   <TableCell className="md:hidden table-cell">{format(transaction.date, 'dd/MM/yy', { locale: es })}</TableCell>
                   <TableCell className="font-medium max-w-[150px] truncate">{transaction.description}</TableCell>
                   <TableCell>
                     <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'} className={cn(transaction.type === 'income' && 'bg-primary')}>
-                      {transaction.type}
+                      {transaction.type === 'income' ? 'Ingreso' : 'Gasto'}
                     </Badge>
                   </TableCell>
                   <TableCell
@@ -86,23 +87,23 @@ export function TransactionsTable({ transactions, onDelete, formatCurrency }: Tr
                       <AlertDialogTrigger asChild>
                         <Button variant="ghost" size="icon">
                           <Trash2 className="h-4 w-4" />
-                          <span className="sr-only">Delete transaction</span>
+                          <span className="sr-only">Eliminar transacción</span>
                         </Button>
                       </AlertDialogTrigger>
                       <AlertDialogContent>
                         <AlertDialogHeader>
-                          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                          <AlertDialogTitle>¿Estás absolutamente seguro?</AlertDialogTitle>
                           <AlertDialogDescription>
-                            This action cannot be undone. This will permanently delete this transaction.
+                            Esta acción no se puede deshacer. Esto eliminará permanentemente esta transacción.
                           </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogCancel>Cancelar</AlertDialogCancel>
                           <AlertDialogAction
                             onClick={() => onDelete(transaction.id)}
                             className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                           >
-                            Delete
+                            Eliminar
                           </AlertDialogAction>
                         </AlertDialogFooter>
                       </AlertDialogContent>

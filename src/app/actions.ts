@@ -8,7 +8,7 @@ export async function handleGenerateSummary(input: GenerateMonthlyLoanSummaryInp
     return { data: summary };
   } catch (e) {
     console.error(e);
-    const errorMessage = e instanceof Error ? e.message : 'An unexpected error occurred.';
-    return { error: `An unexpected error occurred while generating the summary: ${errorMessage}` };
+    const errorMessage = e instanceof Error ? e.message : 'Ocurrió un error inesperado.';
+    return { error: `Ocurrió un error inesperado al generar el resumen: ${errorMessage}` };
   }
 }

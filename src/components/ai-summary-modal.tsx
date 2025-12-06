@@ -45,7 +45,7 @@ export function AiSummaryModal({ incomes, expenses, capital }: AiSummaryModalPro
     if (result.error) {
       toast({
         variant: 'destructive',
-        title: 'Error generating summary',
+        title: 'Error al generar el resumen',
         description: result.error,
       });
     } else if (result.data) {
@@ -68,28 +68,28 @@ export function AiSummaryModal({ incomes, expenses, capital }: AiSummaryModalPro
       <DialogTrigger asChild>
         <Button className="bg-accent text-accent-foreground hover:bg-accent/90">
           <Wand2 className="mr-2 h-4 w-4" />
-          Generate AI Summary
+          Generar Resumen con IA
         </Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle className="font-headline flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-accent" />
-            Monthly Loan Summary
+            Resumen Mensual de Préstamos
           </DialogTitle>
           <DialogDescription>
-            AI-powered insights into your monthly financial activities.
+            Información impulsada por IA sobre tus actividades financieras mensuales.
           </DialogDescription>
         </DialogHeader>
         <div className="py-4 space-y-4 min-h-[250px] flex flex-col justify-center">
           {!summary && !loading && (
             <div className="flex flex-col items-center justify-center text-center p-8 border-2 border-dashed rounded-lg">
                 <Wand2 className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="font-semibold font-headline">Ready to get insights?</h3>
-                <p className="text-sm text-muted-foreground mb-4">Click the button below to generate your summary.</p>
+                <h3 className="font-semibold font-headline">¿Listo para obtener información?</h3>
+                <p className="text-sm text-muted-foreground mb-4">Haz clic en el botón de abajo para generar tu resumen.</p>
                 <Button onClick={onGenerate} className="bg-accent text-accent-foreground hover:bg-accent/90">
                     <Wand2 className="mr-2 h-4 w-4" />
-                    Generate with AI
+                    Generar con IA
                 </Button>
             </div>
           )}
@@ -111,7 +111,7 @@ export function AiSummaryModal({ incomes, expenses, capital }: AiSummaryModalPro
           {summary && !loading && (
              <div className="space-y-4 animate-in fade-in-50">
                 <Alert>
-                    <AlertTitle className="font-bold font-headline">Summary</AlertTitle>
+                    <AlertTitle className="font-bold font-headline">Resumen</AlertTitle>
                     <AlertDescription>
                         {summary}
                     </AlertDescription>
@@ -120,7 +120,7 @@ export function AiSummaryModal({ incomes, expenses, capital }: AiSummaryModalPro
                 <Alert variant="default" className="border-accent">
                     <AlertTitle className="font-bold font-headline flex items-center gap-2 text-accent-foreground">
                         <Sparkles className="h-4 w-4" />
-                        Suggestions
+                        Sugerencias
                     </AlertTitle>
                     <AlertDescription>
                         <ul className="list-disc pl-5 space-y-1">
@@ -135,8 +135,8 @@ export function AiSummaryModal({ incomes, expenses, capital }: AiSummaryModalPro
           )}
         </div>
         <DialogFooter>
-          {summary && !loading && <Button onClick={onGenerate} className="bg-accent text-accent-foreground hover:bg-accent/90">Regenerate</Button>}
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>Close</Button>
+          {summary && !loading && <Button onClick={onGenerate} className="bg-accent text-accent-foreground hover:bg-accent/90">Regenerar</Button>}
+          <Button variant="outline" onClick={() => handleOpenChange(false)}>Cerrar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

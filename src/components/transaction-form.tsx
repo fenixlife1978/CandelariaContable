@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import { Calendar as CalendarIcon, PlusCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -29,8 +30,8 @@ import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
   type: z.enum(['income', 'expense']),
-  amount: z.coerce.number().min(0.01, 'Amount must be greater than 0'),
-  description: z.string().min(2, 'Description must be at least 2 characters').max(100),
+  amount: z.coerce.number().min(0.01, 'El monto debe ser mayor que 0'),
+  description: z.string().min(2, 'La descripción debe tener al menos 2 caracteres').max(100),
   date: z.date(),
 });
 
@@ -66,7 +67,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="font-headline">Add Transaction</CardTitle>
+        <CardTitle className="font-headline">Añadir Transacción</CardTitle>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -76,7 +77,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               name="type"
               render={({ field }) => (
                 <FormItem className="space-y-3">
-                  <FormLabel>Type</FormLabel>
+                  <FormLabel>Tipo</FormLabel>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
@@ -87,13 +88,13 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                         <FormControl>
                           <RadioGroupItem value="income" />
                         </FormControl>
-                        <FormLabel className="font-normal">Income</FormLabel>
+                        <FormLabel className="font-normal">Ingreso</FormLabel>
                       </FormItem>
                       <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl>
                           <RadioGroupItem value="expense" />
                         </FormControl>
-                        <FormLabel className="font-normal">Expense</FormLabel>
+                        <FormLabel className="font-normal">Gasto</FormLabel>
                       </FormItem>
                     </RadioGroup>
                   </FormControl>
@@ -107,7 +108,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               name="amount"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Amount</FormLabel>
+                  <FormLabel>Monto</FormLabel>
                   <FormControl>
                     <Input type="number" placeholder="0.00" {...field} step="0.01" />
                   </FormControl>
@@ -121,9 +122,9 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Descripción</FormLabel>
                   <FormControl>
-                    <Input placeholder="e.g., Loan payment" {...field} />
+                    <Input placeholder="ej. Pago de préstamo" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -135,7 +136,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
               name="date"
               render={({ field }) => (
                 <FormItem className="flex flex-col">
-                  <FormLabel>Date</FormLabel>
+                  <FormLabel>Fecha</FormLabel>
                   <Popover>
                     <PopoverTrigger asChild>
                       <FormControl>
@@ -147,9 +148,9 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                           )}
                         >
                           {isClient && field.value ? (
-                            format(field.value, 'PPP')
+                            format(field.value, 'PPP', { locale: es })
                           ) : (
-                            <span>Pick a date</span>
+                            <span>Elige una fecha</span>
                           )}
                           <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                         </Button>
@@ -161,6 +162,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
                         selected={field.value}
                         onSelect={field.onChange}
                         initialFocus
+                        locale={es}
                       />
                     </PopoverContent>
                   </Popover>
@@ -170,7 +172,7 @@ export function TransactionForm({ onSubmit }: TransactionFormProps) {
             />
 
             <Button type="submit" className="w-full bg-accent text-accent-foreground hover:bg-accent/90">
-              <PlusCircle className="mr-2 h-4 w-4" /> Add Transaction
+              <PlusCircle className="mr-2 h-4 w-4" /> Añadir Transacción
             </Button>
           </form>
         </Form>

@@ -15,26 +15,26 @@ const GenerateMonthlyLoanSummaryInputSchema = z.object({
   income: z
     .array(
       z.object({
-        date: z.string().describe('The date of the income.'),
-        amount: z.number().describe('The amount of the income.'),
-        description: z.string().describe('The description of the income.'),
+        date: z.string().describe('La fecha del ingreso.'),
+        amount: z.number().describe('El monto del ingreso.'),
+        description: z.string().describe('La descripción del ingreso.'),
       })
     )
-    .describe('An array of income entries.'),
+    .describe('Un arreglo de entradas de ingresos.'),
   expenses: z
     .array(
       z.object({
-        date: z.string().describe('The date of the expense.'),
-        amount: z.number().describe('The amount of the expense.'),
-        description: z.string().describe('The description of the expense.'),
+        date: z.string().describe('La fecha del gasto.'),
+        amount: z.number().describe('El monto del gasto.'),
+        description: z.string().describe('La descripción del gasto.'),
       })
     )
-    .describe('An array of expense entries.'),
-  capital: z.number().describe('The current capital.'),
+    .describe('Un arreglo de entradas de gastos.'),
+  capital: z.number().describe('El capital actual.'),
   financialBenchmarks: z
     .string()
     .optional()
-    .describe('Optional financial benchmarks to consider.'),
+    .describe('Benchmarks financieros opcionales a considerar.'),
 });
 
 export type GenerateMonthlyLoanSummaryInput = z.infer<
@@ -42,10 +42,10 @@ export type GenerateMonthlyLoanSummaryInput = z.infer<
 >;
 
 const GenerateMonthlyLoanSummaryOutputSchema = z.object({
-  summary: z.string().describe('The AI-generated monthly summary.'),
+  summary: z.string().describe('El resumen mensual generado por IA.'),
   suggestions: z
     .array(z.string())
-    .describe('Suggestions for improving cash flow.'),
+    .describe('Sugerencias para mejorar el flujo de caja.'),
 });
 
 export type GenerateMonthlyLoanSummaryOutput = z.infer<
@@ -62,32 +62,32 @@ const prompt = ai.definePrompt({
   name: 'generateMonthlyLoanSummaryPrompt',
   input: {schema: GenerateMonthlyLoanSummaryInputSchema},
   output: {schema: GenerateMonthlyLoanSummaryOutputSchema},
-  prompt: `You are a financial advisor specializing in loan management. Generate a monthly summary of loan activities and provide suggestions for improving cash flow.
+  prompt: `Eres un asesor financiero especializado en la gestión de préstamos. Genera un resumen mensual de las actividades de préstamos y proporciona sugerencias para mejorar el flujo de caja. Responde siempre en español.
 
-Here's the data for the month:
+Aquí están los datos del mes:
 
-Income:
+Ingresos:
 {{#each income}}
-  - Date: {{date}}, Amount: {{amount}}, Description: {{description}}
+  - Fecha: {{date}}, Monto: {{amount}}, Descripción: {{description}}
 {{/each}}
 
-Expenses:
+Gastos:
 {{#each expenses}}
-  - Date: {{date}}, Amount: {{amount}}, Description: {{description}}
+  - Fecha: {{date}}, Monto: {{amount}}, Descripción: {{description}}
 {{/each}}
 
-Current Capital: {{capital}}
+Capital Actual: {{capital}}
 
 {{#if financialBenchmarks}}
-  Consider these financial benchmarks: {{financialBenchmarks}}
+  Considera estos benchmarks financieros: {{financialBenchmarks}}
 {{/if}}
 
-Generate a concise summary and provide actionable suggestions for improving cash flow. Only make suggestions if it is absolutely necessary based on historical data and user settings.
+Genera un resumen conciso y proporciona sugerencias accionables para mejorar el flujo de caja. Solo haz sugerencias si es absolutamente necesario en función de los datos históricos y la configuración del usuario.
 
-Summary:
+Resumen:
 {{summary}}
 
-Suggestions:
+Sugerencias:
 {{#each suggestions}}
   - {{this}}
 {{/each}}`,
