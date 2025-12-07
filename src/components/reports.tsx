@@ -22,9 +22,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { TransactionsTable } from './transactions-table';
 import type { Transaction, MonthlyClosure, CompanyProfile } from '@/lib/types';
-import { FileDown, Lock, Banknote } from 'lucide-react';
+import { FileDown, Lock, Banknote, Unlock } from 'lucide-react';
 import { Separator } from './ui/separator';
-import { addDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
 import { collection, where, query, getDocs, doc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
@@ -45,6 +45,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   const [selectedYear, setSelectedYear] = useState<number>(getYear(today));
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isClosingMonth, setIsClosingMonth] = useState(false);
+  const [isReopeningMonth, setIsReopeningMonth] = useState(false);
   const { toast } = useToast();
 
   const reportRef = useRef<HTMLDivElement>(null);
@@ -240,6 +241,28 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     }
   };
 
+  const handleReopenMonth = async () => {
+    setIsReopeningMonth(true);
+    const closureId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
+    const docRef = doc(firestore, 'monthlyClosures', closureId);
+
+    try {
+      await deleteDocumentNonBlocking(docRef);
+      toast({
+        title: 'Mes Reabierto',
+        description: `El mes de ${months[selectedMonth].label} ${selectedYear} ha sido reabierto.`,
+      });
+    } catch (error) {
+       toast({
+        variant: 'destructive',
+        title: 'Error al reabrir el mes',
+        description: 'Hubo un problema al eliminar el cierre del mes.',
+      });
+    } finally {
+        setIsReopeningMonth(false);
+    }
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -285,10 +308,17 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             </Select>
           </div>
           <div className='flex gap-2'>
-            <Button onClick={handleCloseMonth} disabled={isClosingMonth || isClosed} variant="secondary">
-                <Lock className="mr-2 h-4 w-4" />
-                {isClosingMonth ? 'Cerrando...' : 'Cierre del Mes'}
-            </Button>
+            {isClosed ? (
+                <Button onClick={handleReopenMonth} disabled={isReopeningMonth} variant="destructive">
+                    <Unlock className="mr-2 h-4 w-4" />
+                    {isReopeningMonth ? 'Reabriendo...' : 'Reabrir Mes'}
+                </Button>
+            ) : (
+                <Button onClick={handleCloseMonth} disabled={isClosingMonth || isClosed} variant="secondary">
+                    <Lock className="mr-2 h-4 w-4" />
+                    {isClosingMonth ? 'Cerrando...' : 'Cierre del Mes'}
+                </Button>
+            )}
             <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="bg-accent text-accent-foreground hover:bg-accent/90">
               <FileDown className="mr-2 h-4 w-4" />
               {isGeneratingPdf ? 'Generando...' : 'Exportar a PDF'}
