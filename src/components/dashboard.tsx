@@ -202,13 +202,13 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
           </div>
         </TabsContent>
         <TabsContent value="query" className="mt-6">
-            <TransactionQuery 
-              allTransactions={transactions}
-              onDelete={deleteTransaction}
-              onUpdate={updateTransaction}
-              formatCurrency={formatCurrency}
-              isLoading={isLoading}
-            />
+          <TransactionQuery
+            allTransactions={transactions}
+            onDelete={deleteTransaction}
+            onUpdate={updateTransaction}
+            formatCurrency={formatCurrency}
+            isLoading={isLoading}
+          />
         </TabsContent>
         <TabsContent value="reports" className="mt-6">
           <Reports 
