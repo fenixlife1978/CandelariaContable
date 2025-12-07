@@ -44,6 +44,7 @@ const transactionCategories = [
   "Capital Inicial",
   "Gastos Extraordinarios",
   "Egresos Extraordinarios",
+  "Divisas",
 ];
 
 const presetDescriptions = [

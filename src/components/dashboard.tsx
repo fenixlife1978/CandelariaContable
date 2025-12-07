@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, Scale, Settings, Search } from 'lucide-react';
+import { TrendingUp, TrendingDown, Scale, Settings, Search, DollarSign } from 'lucide-react';
 import { TransactionForm } from './transaction-form';
 import { TransactionsTable } from './transactions-table';
 import { AiSummaryModal } from './ai-summary-modal';
@@ -69,7 +69,7 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
   }, [incomesData, expensesData]);
 
 
-  const { totalIncome, totalExpenses, capital } = useMemo(() => {
+  const { totalIncome, totalExpenses, capital, divisasFlow } = useMemo(() => {
     const totalIncomeValue = (incomesData || []).reduce(
         (sum, t) => sum.plus(new Decimal(t.amount)),
         new Decimal(0)
@@ -79,6 +79,15 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
         (sum, t) => sum.plus(new Decimal(t.amount)),
         new Decimal(0)
     );
+    
+    const divisasTransactions = transactions.filter(t => t.category === 'Divisas');
+    const divisasIncome = divisasTransactions
+        .filter(t => t.type === 'income')
+        .reduce((sum, t) => sum.plus(new Decimal(t.amount)), new Decimal(0));
+    const divisasExpenses = divisasTransactions
+        .filter(t => t.type === 'expense')
+        .reduce((sum, t) => sum.plus(new Decimal(t.amount)), new Decimal(0));
+    const divisasFlowValue = divisasIncome.minus(divisasExpenses);
 
     const capitalValue = totalIncomeValue.minus(totalExpensesValue);
 
@@ -86,8 +95,9 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
       totalIncome: totalIncomeValue.toNumber(),
       totalExpenses: totalExpensesValue.toNumber(),
       capital: capitalValue.toNumber(),
+      divisasFlow: divisasFlowValue.toNumber(),
     };
-}, [incomesData, expensesData]);
+}, [incomesData, expensesData, transactions]);
   
   const addTransaction = (transaction: Omit<Transaction, 'id' | 'date'> & { date: Date }) => {
     const data = {
@@ -145,7 +155,7 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
         <AiSummaryModal incomes={incomesForSummary} expenses={expensesForSummary} capital={capital} />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Ingresos Totales</CardTitle>
@@ -175,6 +185,16 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
             <div className="text-2xl font-bold">{formatCurrency(capital)}</div>
             <p className="text-xs text-primary-foreground/70">Flujo de caja neto</p>
           </CardContent>
+        </Card>
+        <Card className="bg-accent text-accent-foreground">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Flujo de Divisas</CardTitle>
+                <DollarSign className="h-4 w-4 text-accent-foreground/70" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{formatCurrency(divisasFlow)}</div>
+                <p className="text-xs text-accent-foreground/70">Balance de la categoría Divisas</p>
+            </CardContent>
         </Card>
       </div>
 
