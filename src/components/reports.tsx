@@ -66,24 +66,14 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
 
   const { filteredTransactions, capitalInicial, isClosed } = useMemo(() => {
     const currentClosure = monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth);
-    const monthIsClosed = currentClosure?.status === 'closed';
     
-    // If the month is closed, we use the stored data.
-    if (monthIsClosed) {
-      // For a closed month, no transactions are shown in the report's detail table,
-      // as they are summarized in the category totals.
+    if (currentClosure?.status === 'closed') {
       return { 
         filteredTransactions: [], 
-        capitalInicial: currentClosure!.initialBalance,
+        capitalInicial: currentClosure.initialBalance,
         isClosed: true 
       };
     }
-
-    // If the month is not closed, calculate everything dynamically.
-    const transactionsForSelectedMonth = allTransactions.filter(transaction =>
-      getMonth(transaction.date) === selectedMonth &&
-      getYear(transaction.date) === selectedYear
-    );
 
     const getPreviousMonthFinalBalance = (month: number, year: number): Decimal => {
         const previousMonthDate = subMonths(new Date(year, month), 1);
@@ -115,6 +105,11 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     
     const capitalInicialValue = getPreviousMonthFinalBalance(selectedMonth, selectedYear);
     
+    const transactionsForSelectedMonth = allTransactions.filter(transaction =>
+      getMonth(transaction.date) === selectedMonth &&
+      getYear(transaction.date) === selectedYear
+    );
+    
     return { 
       filteredTransactions: transactionsForSelectedMonth, 
       capitalInicial: capitalInicialValue.toNumber(), 
@@ -124,7 +119,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
 
   const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
     const closure = monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth && c.status === 'closed');
-    // If the month is closed, use the data from the closure document.
+
     if (closure) {
       return {
         totalIncome: closure.totalIncome,
@@ -135,7 +130,6 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       };
     }
   
-    // If the month is open, calculate from live transactions.
     const incomeValue = filteredTransactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum.plus(new Decimal(t.amount)), new Decimal(0));
@@ -183,7 +177,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       const canvas = await html2canvas(reportRef.current, {
         scale: 2, 
         useCORS: true,
-        backgroundColor: null
+        backgroundColor: '#ffffff'
       });
       const imgData = canvas.toDataURL('image/png');
       const pdf = new jsPDF({
@@ -225,7 +219,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     };
 
     try {
-      addDocumentNonBlocking(docRef, closureData);
+      addDocumentNonBlocking(docRef, closureData, { merge: true });
       
       toast({
         title: 'Cierre Exitoso',
@@ -325,72 +319,65 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         </div>
 
         <div className="border bg-background rounded-lg">
-          <div ref={reportRef} className="p-6">
-            <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden">
-                    {companyProfile?.logo ? (
-                      <Image src={companyProfile.logo} alt="Logo" width={48} height={48} className="object-cover" />
-                    ): (
-                      <Banknote className="h-7 w-7 text-primary-foreground" />
-                    )}
-                  </div>
-                  <div>
-                    <h1 className="text-xl font-bold text-foreground font-headline">
-                        {companyProfile?.name || 'Contabilidad LoanStar'}
-                    </h1>
-                    <p className='text-xs text-muted-foreground'>{companyProfile?.rif}</p>
-                  </div>
-              </div>
-              <div className='text-right text-xs'>
-                <p>{companyProfile?.address}</p>
-                <p>{companyProfile?.phone}</p>
-                <p>{companyProfile?.email}</p>
-              </div>
+          <div ref={reportRef} className="p-8 bg-white">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden border">
+                  {companyProfile?.logo ? (
+                    <Image src={companyProfile.logo} alt="Logo" width={48} height={48} className="object-cover" />
+                  ): (
+                    <Banknote className="h-7 w-7 text-primary-foreground" />
+                  )}
+                </div>
+                <div>
+                  <h1 className="text-xl font-bold text-foreground font-headline">
+                      {companyProfile?.name || 'Contabilidad LoanStar'}
+                  </h1>
+                </div>
             </div>
 
-            <h3 className="text-xl font-bold font-headline mb-4 text-center">
-                Reporte Financiero Mes {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
+            <h3 className="text-lg font-semibold font-headline mb-6 text-center">
+                Reporte de {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
             </h3>
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 text-center">
-                <div className="p-4 bg-secondary rounded-lg">
-                <p className="text-sm text-muted-foreground">Capital Inicial</p>
-                <p className="text-lg font-bold">{formatCurrency(capitalInicial)}</p>
+            
+            <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className="p-4 bg-secondary/30 rounded-lg shadow-sm">
+                  <p className="text-sm text-muted-foreground text-center">Capital Inicial</p>
+                  <p className="text-xl font-bold text-center">{formatCurrency(capitalInicial)}</p>
                 </div>
-                <div className="p-4 bg-secondary rounded-lg">
-                <p className="text-sm text-muted-foreground">Ingresos del Mes</p>
-                <p className="text-lg font-bold text-green-600">{formatCurrency(totalIncome)}</p>
+                <div className="p-4 bg-secondary/30 rounded-lg shadow-sm">
+                  <p className="text-sm text-muted-foreground text-center">Ingresos del Mes</p>
+                  <p className="text-xl font-bold text-center text-green-600">{formatCurrency(totalIncome)}</p>
                 </div>
-                <div className="p-4 bg-secondary rounded-lg">
-                <p className="text-sm text-muted-foreground">Egresos del Mes</p>
-                <p className="text-lg font-bold text-red-600">{formatCurrency(totalExpenses)}</p>
+                <div className="p-4 bg-secondary/30 rounded-lg shadow-sm">
+                  <p className="text-sm text-muted-foreground text-center">Egresos del Mes</p>
+                  <p className="text-xl font-bold text-center text-red-600">{formatCurrency(totalExpenses)}</p>
                 </div>
-                <div className="p-4 bg-secondary rounded-lg">
-                <p className="text-sm text-muted-foreground">Capital Final</p>
-                <p className="text-lg font-bold">{formatCurrency(capitalFinal)}</p>
+                <div className="p-4 bg-secondary/30 rounded-lg shadow-sm">
+                  <p className="text-sm text-muted-foreground text-center">Capital Final</p>
+                  <p className="text-xl font-bold text-center">{formatCurrency(capitalFinal)}</p>
                 </div>
             </div>
             
-            <Separator className="my-6" />
+            <Separator className="my-8" />
 
-            <h4 className="text-lg font-bold font-headline mb-4 text-center">
+            <h4 className="text-lg font-semibold font-headline mb-6 text-center">
                 Resumen por Categoría
             </h4>
             {Object.keys(categoryTotals).length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                     {Object.entries(categoryTotals).map(([category, totals]) => (
-                        <div key={category} className="p-4 bg-secondary/50 rounded-lg">
+                        <div key={category} className="p-4 bg-secondary/30 rounded-lg shadow-sm">
                             <p className="font-bold text-center mb-2">{category}</p>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">Ingresos:</span>
-                                <span className="text-sm font-medium text-green-600">{formatCurrency(totals.income)}</span>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Ingresos:</span>
+                                <span className="font-medium text-green-600">{formatCurrency(totals.income)}</span>
                             </div>
-                            <div className="flex justify-between">
-                                <span className="text-sm text-muted-foreground">Egresos:</span>
-                                <span className="text-sm font-medium text-red-600">{formatCurrency(totals.expense)}</span>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground">Egresos:</span>
+                                <span className="font-medium text-red-600">{formatCurrency(totals.expense)}</span>
                             </div>
-                            <Separator className="my-2" />
-                            <div className="flex justify-between font-bold">
+                            <Separator className="my-2 bg-border/50" />
+                            <div className="flex justify-between font-bold text-sm">
                                 <span>Balance:</span>
                                 <span>{formatCurrency(new Decimal(totals.income).minus(totals.expense).toNumber())}</span>
                             </div>
@@ -401,22 +388,28 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
                 <p className="text-muted-foreground text-center mb-6">No hay datos de categorías para este período.</p>
             )}
              
-            <Separator className="my-6" />
+            {!isClosed && (
+              <>
+                <Separator className="my-8" />
 
-            <h4 className="text-lg font-bold font-headline mb-4 text-center">
-                Detalle de Transacciones
-            </h4>
-            {isClosed ? (
-                <p className="text-muted-foreground text-center">El mes está cerrado. Las transacciones están consolidadas en el resumen por categoría.</p>
-            ) : (
-                 <TransactionsTable 
+                <h4 className="text-lg font-semibold font-headline mb-4 text-center">
+                    Detalle de Transacciones
+                </h4>
+                <TransactionsTable 
                     transactions={filteredTransactions} 
                     onDelete={() => {}} 
                     onUpdate={() => {}}
                     formatCurrency={formatCurrency}
                     isLoading={isLoading}
                     isEmbedded={true}
-                 />
+                />
+              </>
+            )}
+
+            {isClosed && (
+                 <div className="mt-8">
+                    <p className="text-muted-foreground text-center text-sm">El mes está cerrado. Las transacciones están consolidadas en el resumen por categoría.</p>
+                </div>
             )}
           </div>
         </div>
