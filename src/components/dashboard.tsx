@@ -228,6 +228,7 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
             onUpdate={updateTransaction}
             formatCurrency={formatCurrency}
             isLoading={isLoading}
+            companyProfile={companyProfile}
           />
         </TabsContent>
         <TabsContent value="reports" className="mt-6">
