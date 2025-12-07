@@ -25,7 +25,7 @@ import type { Transaction, MonthlyClosure, CompanyProfile } from '@/lib/types';
 import { FileDown, Lock, Banknote, Unlock } from 'lucide-react';
 import { Separator } from './ui/separator';
 import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { collection, where, query, getDocs, doc } from 'firebase/firestore';
+import { collection, where, query, getDocs, doc, writeBatch } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -66,31 +66,41 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   }));
 
   const { filteredTransactions, capitalInicial, isClosed } = useMemo(() => {
+    const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
+
+    // If the month is closed, we use the stored data.
+    if (isMonthClosed) {
+      const closure = monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth)!;
+      // For a closed month, no transactions are shown in the report's detail table,
+      // as they are summarized in the category totals.
+      return { 
+        filteredTransactions: [], 
+        capitalInicial: closure.initialBalance,
+        isClosed: true 
+      };
+    }
+
+    // If the month is not closed, calculate everything dynamically.
     const transactionsForSelectedMonth = allTransactions.filter(transaction =>
       getMonth(transaction.date) === selectedMonth &&
       getYear(transaction.date) === selectedYear
     );
 
-    const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
-
-    // Function to get the balance from the previous month.
     const getPreviousMonthFinalBalance = (month: number, year: number): Decimal => {
         const previousMonthDate = subMonths(new Date(year, month), 1);
         const prevYear = getYear(previousMonthDate);
         const prevMonth = getMonth(previousMonthDate);
 
-        if (year < 2024 && month === 0) { // Antes de Enero 2024
-            return new Decimal(0);
-        }
-        
-        // 1. Try to find a formal closure for the previous month.
         const closure = monthlyClosures.find(c => c.year === prevYear && c.month === prevMonth);
         if (closure) {
             return new Decimal(closure.finalBalance);
         }
 
-        // 2. If no closure, calculate the balance dynamically from its own previous month.
-        const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear); // Recursive call
+        if (year < 2024 && month === 0) {
+            return new Decimal(0);
+        }
+
+        const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear);
         
         const transactionsForPrevMonth = allTransactions.filter(t => 
             getMonth(t.date) === prevMonth && getYear(t.date) === prevYear
@@ -109,13 +119,24 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     return { 
       filteredTransactions: transactionsForSelectedMonth, 
       capitalInicial: capitalInicialValue.toNumber(), 
-      isClosed: isMonthClosed 
+      isClosed: false 
     };
-}, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
-
-
+  }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
 
   const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
+    // If the month is closed, use the data from the closure document.
+    const closure = monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth);
+    if (closure) {
+      return {
+        totalIncome: closure.totalIncome,
+        totalExpenses: closure.totalExpenses,
+        balance: new Decimal(closure.totalIncome).minus(closure.totalExpenses).toNumber(),
+        categoryTotals: closure.categoryTotals,
+        capitalFinal: closure.finalBalance,
+      };
+    }
+  
+    // If the month is open, calculate from live transactions.
     const incomeValue = filteredTransactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum.plus(new Decimal(t.amount)), new Decimal(0));
@@ -152,7 +173,8 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       categoryTotals: categoryTotalsResult,
       capitalFinal: capitalFinalValue.toNumber(),
     };
-  }, [filteredTransactions, capitalInicial]);
+  }, [filteredTransactions, capitalInicial, isClosed, monthlyClosures, selectedYear, selectedMonth]);
+
 
   const handleGeneratePdf = async () => {
     if (!reportRef.current) return;
@@ -189,22 +211,8 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     setIsClosingMonth(true);
 
     const closureId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-    const q = query(
-      monthlyClosuresCollection,
-      where('year', '==', selectedYear),
-      where('month', '==', selectedMonth)
-    );
-    const existingClosure = await getDocs(q);
-
-    if (!existingClosure.empty) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Este mes ya ha sido cerrado.',
-      });
-      setIsClosingMonth(false);
-      return;
-    }
+    
+    const docRef = doc(firestore, 'monthlyClosures', closureId);
 
     const closureData: Omit<MonthlyClosure, 'id'> = {
       month: selectedMonth,
@@ -218,9 +226,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     };
 
     try {
-      // Use closureId for the document
-      const docRef = doc(firestore, 'monthlyClosures', closureId);
-      await addDocumentNonBlocking(docRef, closureData);
+      addDocumentNonBlocking(docRef, closureData);
       
       toast({
         title: 'Cierre Exitoso',
@@ -243,7 +249,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     const docRef = doc(firestore, 'monthlyClosures', closureId);
 
     try {
-      await deleteDocumentNonBlocking(docRef);
+      deleteDocumentNonBlocking(docRef);
       toast({
         title: 'Mes Reabierto',
         description: `El mes de ${months[selectedMonth].label} ${selectedYear} ha sido reabierto.`,
@@ -394,6 +400,24 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
                 </div>
             ) : (
                 <p className="text-muted-foreground text-center mb-6">No hay datos de categorías para este período.</p>
+            )}
+             
+            <Separator className="my-6" />
+
+            <h4 className="text-lg font-bold font-headline mb-4 text-center">
+                Detalle de Transacciones
+            </h4>
+            {isClosed ? (
+                <p className="text-muted-foreground text-center">El mes está cerrado. Las transacciones están consolidadas en el resumen por categoría.</p>
+            ) : (
+                 <TransactionsTable 
+                    transactions={filteredTransactions} 
+                    onDelete={() => {}} 
+                    onUpdate={() => {}}
+                    formatCurrency={formatCurrency}
+                    isLoading={isLoading}
+                    isEmbedded={true}
+                 />
             )}
           </div>
         </div>
