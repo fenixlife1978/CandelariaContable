@@ -79,18 +79,21 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         return new Decimal(closure.finalBalance);
       }
       
-      const transactionsForPrevMonth = allTransactions.filter(t =>
-        getMonth(t.date) === prevMonth && getYear(t.date) === prevYear
-      );
+      // If no closure, calculate from previous month's transactions
+      if (year > 2000 || month > 0) { // Base case to prevent infinite recursion
+          const transactionsForPrevMonth = allTransactions.filter(t =>
+            getMonth(t.date) === prevMonth && getYear(t.date) === prevYear
+          );
 
-      const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear);
-
-      const finalBalance = transactionsForPrevMonth.reduce((acc, t) => {
-        const amount = new Decimal(t.amount);
-        return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
-      }, initialCapitalForPrevMonth);
+          const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear);
+          
+          return transactionsForPrevMonth.reduce((acc, t) => {
+            const amount = new Decimal(t.amount);
+            return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
+          }, initialCapitalForPrevMonth);
+      }
       
-      return finalBalance;
+      return new Decimal(0);
     };
 
     const capitalInicialValue = getPreviousMonthFinalBalance(selectedMonth, selectedYear);
@@ -325,7 +328,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             </div>
 
             <h3 className="text-xl font-semibold font-headline mb-6 text-center">
-                Reporte de {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
+                Reporte Financiero del Mes de {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
             </h3>
             
             <div className="grid grid-cols-2 gap-4 mb-8">
