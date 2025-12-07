@@ -67,25 +67,41 @@ export function ConsolidatedReport({
   }, [selectedYear]);
 
   const getPreviousMonthFinalBalance = useMemo(() => {
-    // Memoize the function itself
-    return (month: number, year: number): Decimal => {
+    // Memoize the function itself for recursive calls
+    const calculateBalance = (month: number, year: number): Decimal => {
       const previousMonthDate = subMonths(new Date(year, month), 1);
       const prevYear = getYear(previousMonthDate);
       const prevMonth = getMonth(previousMonthDate);
 
+      // 1. Check for an existing closure for the previous month
       const closure = monthlyClosures.find(c => c.year === prevYear && c.month === prevMonth && c.status === 'closed');
       if (closure) {
         return new Decimal(closure.finalBalance);
       }
-      
-      // Base case for recursion, e.g., the very first month of data
+
+      // Base case: if we go back before any data exists.
       const firstTransactionYear = Math.min(...allTransactions.map(t => getYear(t.date)), new Date().getFullYear());
       if (year < firstTransactionYear || (year === firstTransactionYear && month === 0)) {
          return new Decimal(0);
       }
       
-      return getPreviousMonthFinalBalance(prevMonth, prevYear);
+      // 2. If no closure, calculate the balance recursively
+      const initialBalanceForPrevMonth = calculateBalance(prevMonth, prevYear);
+      
+      const transactionsForPrevMonth = allTransactions.filter(t => 
+        getYear(t.date) === prevYear && getMonth(t.date) === prevMonth
+      );
+      
+      const sortedTransactions = [...transactionsForPrevMonth].sort((a, b) => a.date.getTime() - b.date.getTime() || a.id.localeCompare(b.id));
+
+      const finalBalanceForPrevMonth = sortedTransactions.reduce((balance, t) => {
+          const amount = new Decimal(t.amount);
+          return t.type === 'income' ? balance.plus(amount) : balance.minus(amount);
+      }, initialBalanceForPrevMonth);
+
+      return finalBalanceForPrevMonth;
     };
+    return calculateBalance;
   }, [monthlyClosures, allTransactions]);
 
 
