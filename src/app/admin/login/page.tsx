@@ -143,7 +143,7 @@ export default function LoginPage() {
           )}
         </div>
         <h1 className="text-2xl font-bold text-foreground font-headline text-center">
-          Contabilidad Asoc. Coop. Trans. La Candelaria
+          Contabilidad Asoc. Coop. de Transp. La Candelaria
         </h1>
       </div>
       <Card className="w-full max-w-sm">
