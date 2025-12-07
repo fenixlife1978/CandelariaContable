@@ -87,10 +87,10 @@ export function TransactionsTable({ transactions, onDelete, onUpdate, formatCurr
                 <Badge 
                   variant={transaction.type === 'income' ? 'default' : 'secondary'} 
                   className={cn(
-                    'flex items-center justify-center text-center',
+                    'text-center',
                     transaction.type === 'income' ? 'bg-primary' : 'bg-secondary text-secondary-foreground'
                   )}
-                  style={{ display: 'block', width: 'fit-content', padding: '0.25rem 0.75rem' }}
+                  style={{ display: 'inline-block', lineHeight: '1.25rem', padding: '0.1rem 0.75rem' }}
                 >
                   {transaction.type === 'income' ? 'Ingreso' : 'Egreso'}
                 </Badge>
