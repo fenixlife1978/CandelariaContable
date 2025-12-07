@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { format, getYear } from 'date-fns';
+import { format, getYear, getMonth, subMonths } from 'date-fns';
 import { es } from 'date-fns/locale';
 import Decimal from 'decimal.js';
 
@@ -36,15 +36,12 @@ type ConsolidatedReportProps = {
   formatCurrency: (amount: number) => string;
 };
 
-const transactionCategories = [
+const CATEGORY_COLUMNS: (keyof typeof reportData.categoryTotals)[] = [
   "Fiscalía",
   "Capital Recuperado",
   "Intereses Ganados",
+  "Préstamos Candelaria",
   "Préstamos Socios",
-  "Prestamos Candelaria",
-  "Capital Inicial",
-  "Gastos Extraordinarios",
-  "Egresos Extraordinarios",
   "Divisas",
 ];
 
@@ -65,72 +62,87 @@ export function ConsolidatedReport({
   const months = useMemo(() => {
     return Array.from({ length: 12 }, (_, i) => ({
       value: i,
-      label: format(new Date(2000, i, 1), 'LLL', { locale: es }),
+      label: format(new Date(selectedYear, i, 1), 'LLLL', { locale: es }),
     }));
-  }, []);
+  }, [selectedYear]);
+
+  const getPreviousMonthFinalBalance = useMemo(() => {
+    // Memoize the function itself
+    return (month: number, year: number): Decimal => {
+      const previousMonthDate = subMonths(new Date(year, month), 1);
+      const prevYear = getYear(previousMonthDate);
+      const prevMonth = getMonth(previousMonthDate);
+
+      const closure = monthlyClosures.find(c => c.year === prevYear && c.month === prevMonth && c.status === 'closed');
+      if (closure) {
+        return new Decimal(closure.finalBalance);
+      }
+      
+      // Base case for recursion, e.g., the very first month of data
+      const firstTransactionYear = Math.min(...allTransactions.map(t => getYear(t.date)), new Date().getFullYear());
+      if (year < firstTransactionYear || (year === firstTransactionYear && month === 0)) {
+         return new Decimal(0);
+      }
+      
+      return getPreviousMonthFinalBalance(prevMonth, prevYear);
+    };
+  }, [monthlyClosures, allTransactions]);
+
 
   const reportData = useMemo(() => {
-    const data: Record<string, Record<number, Decimal>> = {};
-    const monthlyTotals: Record<number, Decimal> = {};
+    return months.map(month => {
+      const monthIndex = month.value;
+      const closure = monthlyClosures.find(c => c.year === selectedYear && c.month === monthIndex && c.status === 'closed');
+      
+      const initialBalance = getPreviousMonthFinalBalance(monthIndex, selectedYear);
 
-    // Initialize data structure
-    transactionCategories.forEach((category) => {
-      data[category] = {};
-      months.forEach((month) => {
-        data[category][month.value] = new Decimal(0);
-      });
-    });
-    months.forEach(m => monthlyTotals[m.value] = new Decimal(0));
+      let finalBalance: Decimal;
+      const categoryTotals: Record<string, Decimal> = {};
+      CATEGORY_COLUMNS.forEach(cat => categoryTotals[cat] = new Decimal(0));
 
-    // Process closed months
-    monthlyClosures
-      .filter((c) => c.year === selectedYear && c.status === 'closed')
-      .forEach((closure) => {
+      if (closure) {
+        finalBalance = new Decimal(closure.finalBalance);
         Object.entries(closure.categoryTotals).forEach(([category, totals]) => {
-          if (data[category]) {
-            const netBalance = new Decimal(totals.income).minus(totals.expense);
-            data[category][closure.month] = netBalance;
-            monthlyTotals[closure.month] = monthlyTotals[closure.month].plus(netBalance);
+          if (CATEGORY_COLUMNS.includes(category as any)) {
+            categoryTotals[category] = new Decimal(totals.income).minus(totals.expense);
           }
         });
-      });
+      } else {
+        const transactionsForMonth = allTransactions.filter(t => 
+            getYear(t.date) === selectedYear && getMonth(t.date) === monthIndex
+        );
 
-    // Process open months
-    const openMonths = months.filter(
-      (m) => !monthlyClosures.some((c) => c.year === selectedYear && c.month === m.value && c.status === 'closed')
-    );
-
-    openMonths.forEach((month) => {
-      allTransactions
-        .filter((t) => getYear(t.date) === selectedYear && t.date.getMonth() === month.value)
-        .forEach((transaction) => {
-          if (data[transaction.category]) {
-            const amount = new Decimal(transaction.amount);
-            const netChange = transaction.type === 'income' ? amount : amount.negated();
-            data[transaction.category][month.value] = data[transaction.category][month.value].plus(netChange);
-            monthlyTotals[month.value] = monthlyTotals[month.value].plus(netChange);
-          }
+        transactionsForMonth.forEach(t => {
+            if (CATEGORY_COLUMNS.includes(t.category as any)) {
+                const amount = new Decimal(t.amount);
+                const netChange = t.type === 'income' ? amount : amount.negated();
+                categoryTotals[t.category] = categoryTotals[t.category].plus(netChange);
+            }
         });
+        
+        const sortedTransactions = [...transactionsForMonth].sort((a, b) => a.date.getTime() - b.date.getTime() || a.id.localeCompare(b.id));
+
+        finalBalance = sortedTransactions.reduce((balance, t) => {
+            const amount = new Decimal(t.amount);
+            return t.type === 'income' ? balance.plus(amount) : balance.minus(amount);
+        }, initialBalance);
+      }
+
+      return {
+        month: month.label,
+        initialBalance: initialBalance.toNumber(),
+        finalBalance: finalBalance.toNumber(),
+        categoryTotals: Object.fromEntries(Object.entries(categoryTotals).map(([key, value]) => [key, value.toNumber()]))
+      };
     });
-    
-    // Calculate totals
-    const categoryTotals = Object.fromEntries(
-        transactionCategories.map(category => [
-            category,
-            Object.values(data[category]).reduce((sum, val) => sum.plus(val), new Decimal(0))
-        ])
-    );
-    const grandTotal = Object.values(categoryTotals).reduce((sum, val) => sum.plus(val), new Decimal(0));
-
-    return { data, monthlyTotals, categoryTotals, grandTotal };
-  }, [selectedYear, allTransactions, monthlyClosures, months]);
+  }, [selectedYear, allTransactions, monthlyClosures, months, getPreviousMonthFinalBalance]);
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="font-headline">Reporte Consolidado Anual</CardTitle>
         <CardDescription>
-          Vea un resumen de los balances netos por categoría para cada mes del año seleccionado.
+          Resumen financiero mensual por categorías para el año seleccionado.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -156,46 +168,32 @@ export function ConsolidatedReport({
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="font-bold sticky left-0 bg-background z-10">Categoría</TableHead>
-                {months.map((month) => (
-                  <TableHead key={month.value} className="text-right whitespace-nowrap">
-                    {month.label}
-                  </TableHead>
-                ))}
-                <TableHead className="text-right font-bold whitespace-nowrap">Total</TableHead>
+                <TableHead className="font-bold sticky left-0 bg-background z-10 whitespace-nowrap">Mes</TableHead>
+                <TableHead className="text-right font-bold whitespace-nowrap">Saldo Inicial</TableHead>
+                {CATEGORY_COLUMNS.map(col => <TableHead key={col} className="text-right whitespace-nowrap">{col}</TableHead>)}
+                <TableHead className="text-right font-bold whitespace-nowrap">Saldo Final</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {transactionCategories.map((category) => (
-                <TableRow key={category}>
-                  <TableCell className="font-medium sticky left-0 bg-background z-10">{category}</TableCell>
-                  {months.map((month) => {
-                    const value = reportData.data[category][month.value].toNumber();
+              {reportData.map((row) => (
+                <TableRow key={row.month}>
+                  <TableCell className="font-medium sticky left-0 bg-background z-10 capitalize whitespace-nowrap">{row.month}</TableCell>
+                  <TableCell className={cn("text-right tabular-nums whitespace-nowrap", row.initialBalance < 0 ? 'text-red-600' : 'text-foreground')}>
+                      {formatCurrency(row.initialBalance)}
+                  </TableCell>
+                  {CATEGORY_COLUMNS.map(col => {
+                    const value = row.categoryTotals[col] || 0;
                     return (
-                      <TableCell key={month.value} className={cn("text-right whitespace-nowrap tabular-nums", value < 0 ? 'text-red-600' : 'text-foreground')}>
-                        {formatCurrency(value)}
-                      </TableCell>
+                        <TableCell key={col} className={cn("text-right tabular-nums whitespace-nowrap", value < 0 ? 'text-red-600' : 'text-foreground')}>
+                            {formatCurrency(value)}
+                        </TableCell>
                     );
                   })}
-                  <TableCell className={cn("text-right font-bold whitespace-nowrap tabular-nums", reportData.categoryTotals[category].toNumber() < 0 ? 'text-red-600' : 'text-foreground')}>
-                     {formatCurrency(reportData.categoryTotals[category].toNumber())}
+                  <TableCell className={cn("text-right font-bold tabular-nums whitespace-nowrap", row.finalBalance < 0 ? 'text-red-600' : 'text-foreground')}>
+                      {formatCurrency(row.finalBalance)}
                   </TableCell>
                 </TableRow>
               ))}
-               <TableRow className="bg-muted hover:bg-muted font-bold">
-                 <TableCell className="sticky left-0 bg-muted z-10">Total Mensual</TableCell>
-                 {months.map((month) => {
-                    const total = reportData.monthlyTotals[month.value].toNumber();
-                    return (
-                        <TableCell key={month.value} className={cn("text-right whitespace-nowrap tabular-nums", total < 0 ? 'text-red-600' : 'text-foreground')}>
-                           {formatCurrency(total)}
-                        </TableCell>
-                    );
-                })}
-                <TableCell className={cn("text-right whitespace-nowrap tabular-nums", reportData.grandTotal.toNumber() < 0 ? 'text-red-600' : 'text-foreground')}>
-                    {formatCurrency(reportData.grandTotal.toNumber())}
-                </TableCell>
-               </TableRow>
             </TableBody>
           </Table>
         </div>
