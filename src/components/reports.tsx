@@ -79,14 +79,10 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         const prevYear = getYear(previousMonthDate);
         const prevMonth = getMonth(previousMonthDate);
 
-        // Base case: For any date before Jan 2024, initial capital is 0.
-        if (year < 2024) {
+        if (year < 2024 && month === 0) { // Antes de Enero 2024
             return new Decimal(0);
         }
-        if (year === 2024 && month === 0) { // Enero 2024
-            return new Decimal(0);
-        }
-
+        
         // 1. Try to find a formal closure for the previous month.
         const closure = monthlyClosures.find(c => c.year === prevYear && c.month === prevMonth);
         if (closure) {
@@ -308,17 +304,14 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             </Select>
           </div>
           <div className='flex gap-2'>
-            {isClosed ? (
-                <Button onClick={handleReopenMonth} disabled={isReopeningMonth} variant="destructive">
-                    <Unlock className="mr-2 h-4 w-4" />
-                    {isReopeningMonth ? 'Reabriendo...' : 'Reabrir Mes'}
-                </Button>
-            ) : (
-                <Button onClick={handleCloseMonth} disabled={isClosingMonth || isClosed} variant="secondary">
-                    <Lock className="mr-2 h-4 w-4" />
-                    {isClosingMonth ? 'Cerrando...' : 'Cierre del Mes'}
-                </Button>
-            )}
+            <Button onClick={handleCloseMonth} disabled={isClosingMonth || isClosed} variant="secondary">
+                <Lock className="mr-2 h-4 w-4" />
+                {isClosingMonth ? 'Cerrando...' : 'Cierre del Mes'}
+            </Button>
+            <Button onClick={handleReopenMonth} disabled={isReopeningMonth || !isClosed} variant="destructive">
+                <Unlock className="mr-2 h-4 w-4" />
+                {isReopeningMonth ? 'Reabriendo...' : 'Reabrir Mes'}
+            </Button>
             <Button onClick={handleGeneratePdf} disabled={isGeneratingPdf} className="bg-accent text-accent-foreground hover:bg-accent/90">
               <FileDown className="mr-2 h-4 w-4" />
               {isGeneratingPdf ? 'Generando...' : 'Exportar a PDF'}
