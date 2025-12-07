@@ -84,7 +84,14 @@ export function TransactionsTable({ transactions, onDelete, onUpdate, formatCurr
               <TableCell className="font-medium max-w-xs whitespace-normal break-words">{transaction.description}</TableCell>
               <TableCell>{transaction.category}</TableCell>
               <TableCell>
-                <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'} className={cn(transaction.type === 'income' && 'bg-primary')}>
+                <Badge 
+                  variant={transaction.type === 'income' ? 'default' : 'secondary'} 
+                  className={cn(
+                    'flex items-center justify-center text-center',
+                    transaction.type === 'income' ? 'bg-primary' : 'bg-secondary text-secondary-foreground'
+                  )}
+                  style={{ display: 'block', width: 'fit-content', padding: '0.25rem 0.75rem' }}
+                >
                   {transaction.type === 'income' ? 'Ingreso' : 'Egreso'}
                 </Badge>
               </TableCell>
