@@ -52,6 +52,8 @@ const presetDescriptions = [
   "Intereses Cobrados",
   "Prestamos del Mes / Socios",
   "Prestamos / Candelaria",
+  "Compra de Divisas",
+  "Gastos de Divisas",
 ];
 
 const formSchema = z.object({
