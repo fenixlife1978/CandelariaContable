@@ -63,94 +63,96 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     value: i,
     label: format(new Date(2000, i, 1), 'LLLL', { locale: es }),
   }));
+  
+  const selectedClosure = useMemo(() => {
+    return monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth);
+  }, [monthlyClosures, selectedYear, selectedMonth]);
 
   const { filteredTransactions, capitalInicial, isClosed } = useMemo(() => {
-    const currentClosure = monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth);
-    
-    if (currentClosure?.status === 'closed') {
-      return { 
-        filteredTransactions: [], 
-        capitalInicial: currentClosure.initialBalance,
-        isClosed: true 
+    if (selectedClosure?.status === 'closed') {
+      return {
+        filteredTransactions: [],
+        capitalInicial: selectedClosure.initialBalance,
+        isClosed: true,
       };
     }
 
     const getPreviousMonthFinalBalance = (month: number, year: number): Decimal => {
-        const previousMonthDate = subMonths(new Date(year, month), 1);
-        const prevYear = getYear(previousMonthDate);
-        const prevMonth = getMonth(previousMonthDate);
+      const previousMonthDate = subMonths(new Date(year, month), 1);
+      const prevYear = getYear(previousMonthDate);
+      const prevMonth = getMonth(previousMonthDate);
 
-        const closure = monthlyClosures.find(c => c.year === prevYear && c.month === prevMonth);
-        if (closure) {
-            return new Decimal(closure.finalBalance);
-        }
+      const closure = monthlyClosures.find(c => c.year === prevYear && c.month === prevMonth);
+      if (closure) {
+        return new Decimal(closure.finalBalance);
+      }
 
-        if (year < 2024 && month === 0) {
-            return new Decimal(0);
-        }
+      // Base case: if we go back before any transactions exist and there's no closure, start at 0.
+      if (year < 2024 && month === 0) { // Adjust this condition based on your data start date
+          return new Decimal(0);
+      }
 
-        const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear);
-        
-        const transactionsForPrevMonth = allTransactions.filter(t => 
-            getMonth(t.date) === prevMonth && getYear(t.date) === prevYear
-        );
+      // If no closure, we must calculate it recursively
+      const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear);
+      
+      const transactionsForPrevMonth = allTransactions.filter(t =>
+        getMonth(t.date) === prevMonth && getYear(t.date) === prevYear
+      );
 
-        const finalBalance = transactionsForPrevMonth.reduce((acc, t) => {
-            const amount = new Decimal(t.amount);
-            return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
-        }, initialCapitalForPrevMonth);
-        
-        return finalBalance;
+      const finalBalance = transactionsForPrevMonth.reduce((acc, t) => {
+        const amount = new Decimal(t.amount);
+        return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
+      }, initialCapitalForPrevMonth);
+      
+      return finalBalance;
     };
-    
+
     const capitalInicialValue = getPreviousMonthFinalBalance(selectedMonth, selectedYear);
-    
+
     const transactionsForSelectedMonth = allTransactions.filter(transaction =>
       getMonth(transaction.date) === selectedMonth &&
       getYear(transaction.date) === selectedYear
     );
-    
-    return { 
-      filteredTransactions: transactionsForSelectedMonth, 
-      capitalInicial: capitalInicialValue.toNumber(), 
-      isClosed: false
+
+    return {
+      filteredTransactions: transactionsForSelectedMonth,
+      capitalInicial: capitalInicialValue.toNumber(),
+      isClosed: false,
     };
-  }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
+  }, [allTransactions, selectedMonth, selectedYear, monthlyClosures, selectedClosure]);
 
   const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
-    const closure = monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth && c.status === 'closed');
-
-    if (closure) {
+    if (selectedClosure?.status === 'closed') {
       return {
-        totalIncome: closure.totalIncome,
-        totalExpenses: closure.totalExpenses,
-        balance: new Decimal(closure.totalIncome).minus(closure.totalExpenses).toNumber(),
-        categoryTotals: closure.categoryTotals,
-        capitalFinal: closure.finalBalance,
+        totalIncome: selectedClosure.totalIncome,
+        totalExpenses: selectedClosure.totalExpenses,
+        balance: new Decimal(selectedClosure.totalIncome).minus(selectedClosure.totalExpenses).toNumber(),
+        categoryTotals: selectedClosure.categoryTotals,
+        capitalFinal: selectedClosure.finalBalance,
       };
     }
-  
+
     const incomeValue = filteredTransactions
       .filter(t => t.type === 'income')
       .reduce((sum, t) => sum.plus(new Decimal(t.amount)), new Decimal(0));
-      
+
     const expensesValue = filteredTransactions
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum.plus(new Decimal(t.amount)), new Decimal(0));
-    
+
     const categoryTotalsMap = filteredTransactions.reduce((acc, t) => {
-        if (!acc[t.category]) {
-            acc[t.category] = { income: new Decimal(0), expense: new Decimal(0) };
-        }
-        const amount = new Decimal(t.amount);
-        if (t.type === 'income') {
-            acc[t.category].income = acc[t.category].income.plus(amount);
-        } else {
-            acc[t.category].expense = acc[t.category].expense.plus(amount);
-        }
-        return acc;
+      if (!acc[t.category]) {
+        acc[t.category] = { income: new Decimal(0), expense: new Decimal(0) };
+      }
+      const amount = new Decimal(t.amount);
+      if (t.type === 'income') {
+        acc[t.category].income = acc[t.category].income.plus(amount);
+      } else {
+        acc[t.category].expense = acc[t.category].expense.plus(amount);
+      }
+      return acc;
     }, {} as Record<string, { income: Decimal; expense: Decimal }>);
-    
+
     const categoryTotalsResult = Object.entries(categoryTotalsMap).reduce((acc, [key, value]) => {
       acc[key] = { income: value.income.toNumber(), expense: value.expense.toNumber() };
       return acc;
@@ -166,7 +168,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       categoryTotals: categoryTotalsResult,
       capitalFinal: capitalFinalValue.toNumber(),
     };
-  }, [filteredTransactions, capitalInicial, isClosed, monthlyClosures, selectedYear, selectedMonth]);
+  }, [filteredTransactions, capitalInicial, selectedClosure]);
 
 
   const handleGeneratePdf = async () => {
@@ -219,7 +221,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     };
 
     try {
-      addDocumentNonBlocking(docRef, closureData, { merge: true });
+      await addDocumentNonBlocking(docRef, closureData, { merge: true });
       
       toast({
         title: 'Cierre Exitoso',
@@ -242,7 +244,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     const docRef = doc(firestore, 'monthlyClosures', closureId);
 
     try {
-      updateDocumentNonBlocking(docRef, { status: 'open' });
+      await updateDocumentNonBlocking(docRef, { status: 'open' });
       toast({
         title: 'Mes Reabierto',
         description: `El mes de ${months[selectedMonth].label} ${selectedYear} ha sido reabierto.`,
@@ -257,6 +259,8 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         setIsReopeningMonth(false);
     }
   };
+
+  const monthIsClosed = selectedClosure?.status === 'closed';
 
   return (
     <Card>
@@ -303,11 +307,11 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             </Select>
           </div>
           <div className='flex gap-2'>
-            <Button onClick={handleCloseMonth} disabled={isClosingMonth || isClosed} variant="secondary">
+            <Button onClick={handleCloseMonth} disabled={isClosingMonth || monthIsClosed} variant="secondary">
                 <Lock className="mr-2 h-4 w-4" />
                 {isClosingMonth ? 'Cerrando...' : 'Cierre del Mes'}
             </Button>
-            <Button onClick={handleReopenMonth} disabled={isReopeningMonth || !isClosed} variant="destructive">
+            <Button onClick={handleReopenMonth} disabled={isReopeningMonth || !monthIsClosed} variant="destructive">
                 <Unlock className="mr-2 h-4 w-4" />
                 {isReopeningMonth ? 'Reabriendo...' : 'Reabrir Mes'}
             </Button>
@@ -319,17 +323,17 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         </div>
 
         <div className="border bg-background rounded-lg">
-          <div ref={reportRef} className="p-8 bg-white">
-            <div className="flex items-center gap-3 mb-4">
-                <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden border">
-                  {companyProfile?.logo ? (
-                    <Image src={companyProfile.logo} alt="Logo" width={48} height={48} className="object-cover" />
-                  ): (
-                    <Banknote className="h-7 w-7 text-primary-foreground" />
-                  )}
-                </div>
-                <div>
-                  <h1 className="text-xl font-bold text-foreground font-headline">
+          <div ref={reportRef} className="p-8 bg-white text-black">
+            <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden border">
+                    {companyProfile?.logo ? (
+                      <Image src={companyProfile.logo} alt="Logo" width={48} height={48} className="object-cover" />
+                    ): (
+                      <Banknote className="h-7 w-7 text-primary-foreground" />
+                    )}
+                  </div>
+                  <h1 className="text-xl font-bold font-headline">
                       {companyProfile?.name || 'Contabilidad LoanStar'}
                   </h1>
                 </div>
@@ -340,43 +344,43 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             </h3>
             
             <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="p-4 bg-secondary/30 rounded-lg shadow-sm">
-                  <p className="text-sm text-muted-foreground text-center">Capital Inicial</p>
+                <div className="p-4 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+                  <p className="text-sm text-gray-600 text-center">Capital Inicial</p>
                   <p className="text-xl font-bold text-center">{formatCurrency(capitalInicial)}</p>
                 </div>
-                <div className="p-4 bg-secondary/30 rounded-lg shadow-sm">
-                  <p className="text-sm text-muted-foreground text-center">Ingresos del Mes</p>
+                <div className="p-4 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+                  <p className="text-sm text-gray-600 text-center">Ingresos del Mes</p>
                   <p className="text-xl font-bold text-center text-green-600">{formatCurrency(totalIncome)}</p>
                 </div>
-                <div className="p-4 bg-secondary/30 rounded-lg shadow-sm">
-                  <p className="text-sm text-muted-foreground text-center">Egresos del Mes</p>
+                <div className="p-4 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+                  <p className="text-sm text-gray-600 text-center">Egresos del Mes</p>
                   <p className="text-xl font-bold text-center text-red-600">{formatCurrency(totalExpenses)}</p>
                 </div>
-                <div className="p-4 bg-secondary/30 rounded-lg shadow-sm">
-                  <p className="text-sm text-muted-foreground text-center">Capital Final</p>
+                <div className="p-4 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+                  <p className="text-sm text-gray-600 text-center">Capital Final</p>
                   <p className="text-xl font-bold text-center">{formatCurrency(capitalFinal)}</p>
                 </div>
             </div>
             
-            <Separator className="my-8" />
+            <Separator className="my-8 bg-gray-300" />
 
             <h4 className="text-lg font-semibold font-headline mb-6 text-center">
                 Resumen por Categoría
             </h4>
             {Object.keys(categoryTotals).length > 0 ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-2 gap-4 mb-6">
                     {Object.entries(categoryTotals).map(([category, totals]) => (
-                        <div key={category} className="p-4 bg-secondary/30 rounded-lg shadow-sm">
+                        <div key={category} className="p-4 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
                             <p className="font-bold text-center mb-2">{category}</p>
                             <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Ingresos:</span>
+                                <span className="text-gray-600">Ingresos:</span>
                                 <span className="font-medium text-green-600">{formatCurrency(totals.income)}</span>
                             </div>
                             <div className="flex justify-between text-sm">
-                                <span className="text-muted-foreground">Egresos:</span>
+                                <span className="text-gray-600">Egresos:</span>
                                 <span className="font-medium text-red-600">{formatCurrency(totals.expense)}</span>
                             </div>
-                            <Separator className="my-2 bg-border/50" />
+                            <Separator className="my-2 bg-gray-300" />
                             <div className="flex justify-between font-bold text-sm">
                                 <span>Balance:</span>
                                 <span>{formatCurrency(new Decimal(totals.income).minus(totals.expense).toNumber())}</span>
@@ -385,30 +389,32 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
                     ))}
                 </div>
             ) : (
-                <p className="text-muted-foreground text-center mb-6">No hay datos de categorías para este período.</p>
+                <p className="text-gray-500 text-center mb-6">No hay datos de categorías para este período.</p>
             )}
              
-            {!isClosed && (
+            {!monthIsClosed && (
               <>
-                <Separator className="my-8" />
+                <Separator className="my-8 bg-gray-300" />
 
                 <h4 className="text-lg font-semibold font-headline mb-4 text-center">
                     Detalle de Transacciones
                 </h4>
-                <TransactionsTable 
-                    transactions={filteredTransactions} 
-                    onDelete={() => {}} 
-                    onUpdate={() => {}}
-                    formatCurrency={formatCurrency}
-                    isLoading={isLoading}
-                    isEmbedded={true}
-                />
+                <div className="overflow-x-auto">
+                    <TransactionsTable 
+                        transactions={filteredTransactions} 
+                        onDelete={() => {}} 
+                        onUpdate={() => {}}
+                        formatCurrency={formatCurrency}
+                        isLoading={isLoading}
+                        isEmbedded={true}
+                    />
+                </div>
               </>
             )}
 
-            {isClosed && (
+            {monthIsClosed && (
                  <div className="mt-8">
-                    <p className="text-muted-foreground text-center text-sm">El mes está cerrado. Las transacciones están consolidadas en el resumen por categoría.</p>
+                    <p className="text-gray-500 text-center text-sm">El mes está cerrado. Las transacciones están consolidadas en el resumen por categoría.</p>
                 </div>
             )}
           </div>
