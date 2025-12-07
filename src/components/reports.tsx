@@ -78,10 +78,6 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       if (closure) {
         return new Decimal(closure.finalBalance);
       }
-
-      if (year < 2024 && month === 0) { 
-          return new Decimal(0);
-      }
       
       const transactionsForPrevMonth = allTransactions.filter(t =>
         getMonth(t.date) === prevMonth && getYear(t.date) === prevYear
@@ -311,9 +307,9 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
           </div>
         </div>
 
-        <div className="border bg-background rounded-lg">
+        <div className="border bg-background rounded-lg p-4">
           <div ref={reportRef} className="p-8 bg-white text-black">
-            <div className="flex items-start justify-between mb-8">
+             <div className="flex items-start justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden border">
                     {companyProfile?.logo ? (
@@ -380,26 +376,6 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             ) : (
                 <p className="text-gray-500 text-center mb-6">No hay datos de categorías para este período.</p>
             )}
-             
-            {!monthIsClosed && (
-              <>
-                <Separator className="my-8 bg-gray-300" />
-
-                <h4 className="text-lg font-semibold font-headline mb-4 text-center">
-                    Detalle de Transacciones
-                </h4>
-                <div className="overflow-x-auto">
-                    <TransactionsTable 
-                        transactions={filteredTransactions} 
-                        onDelete={() => {}} 
-                        onUpdate={() => {}}
-                        formatCurrency={formatCurrency}
-                        isLoading={isLoading}
-                        isEmbedded={true}
-                    />
-                </div>
-              </>
-            )}
 
             {monthIsClosed && (
                  <div className="mt-8">
@@ -408,6 +384,25 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             )}
           </div>
         </div>
+        
+        {!monthIsClosed && (
+            <div>
+              <Separator className="my-6" />
+              <h4 className="text-lg font-semibold font-headline mb-4">
+                  Detalle de Transacciones del Mes
+              </h4>
+              <div className="overflow-x-auto">
+                  <TransactionsTable 
+                      transactions={filteredTransactions} 
+                      onDelete={() => {}} 
+                      onUpdate={() => {}}
+                      formatCurrency={formatCurrency}
+                      isLoading={isLoading}
+                      isEmbedded={true}
+                  />
+              </div>
+            </div>
+        )}
       </CardContent>
     </Card>
   );
