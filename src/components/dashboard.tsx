@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, Scale, Settings } from 'lucide-react';
+import { TrendingUp, TrendingDown, Scale, Settings, Search } from 'lucide-react';
 import { TransactionForm } from './transaction-form';
 import { TransactionsTable } from './transactions-table';
 import { AiSummaryModal } from './ai-summary-modal';
@@ -21,6 +21,7 @@ import { Reports } from './reports';
 import { Configuration } from './configuration';
 import Decimal from 'decimal.js';
 import { getAuth } from 'firebase/auth';
+import { TransactionQuery } from './transaction-query';
 
 type DashboardProps = {
   companyProfile: CompanyProfile | null;
@@ -180,6 +181,10 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
       <Tabs defaultValue="transactions">
         <TabsList>
           <TabsTrigger value="transactions">Transacciones</TabsTrigger>
+          <TabsTrigger value="query">
+            <Search className="mr-2 h-4 w-4" />
+            Consultas
+          </TabsTrigger>
           <TabsTrigger value="reports">Reportes</TabsTrigger>
           <TabsTrigger value="configuration">
             <Settings className="mr-2 h-4 w-4" />
@@ -195,6 +200,15 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
               <TransactionsTable transactions={transactions} onDelete={deleteTransaction} onUpdate={updateTransaction} formatCurrency={formatCurrency} isLoading={isLoading} />
             </div>
           </div>
+        </TabsContent>
+        <TabsContent value="query" className="mt-6">
+            <TransactionQuery 
+              allTransactions={transactions}
+              onDelete={deleteTransaction}
+              onUpdate={updateTransaction}
+              formatCurrency={formatCurrency}
+              isLoading={isLoading}
+            />
         </TabsContent>
         <TabsContent value="reports" className="mt-6">
           <Reports 
