@@ -87,7 +87,9 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
 
           const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear);
           
-          return transactionsForPrevMonth.reduce((acc, t) => {
+          const sortedTransactions = [...transactionsForPrevMonth].sort((a, b) => a.date.getTime() - b.date.getTime() || a.id.localeCompare(b.id));
+
+          return sortedTransactions.reduce((acc, t) => {
             const amount = new Decimal(t.amount);
             return t.type === 'income' ? acc.plus(amount) : acc.minus(amount);
           }, initialCapitalForPrevMonth);
@@ -147,7 +149,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     }, {} as Record<string, { income: number; expense: number }>);
     
     // Chronological calculation as requested
-    const sortedTransactions = [...filteredTransactions].sort((a, b) => a.date.getTime() - b.date.getTime());
+    const sortedTransactions = [...filteredTransactions].sort((a, b) => a.date.getTime() - b.date.getTime() || a.id.localeCompare(b.id));
     
     const capitalFinalValue = sortedTransactions.reduce((currentBalance, transaction) => {
         const amount = new Decimal(transaction.amount);
