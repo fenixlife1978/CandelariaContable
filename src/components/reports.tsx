@@ -24,8 +24,8 @@ import { TransactionsTable } from './transactions-table';
 import type { Transaction, MonthlyClosure, CompanyProfile } from '@/lib/types';
 import { FileDown, Lock, Banknote, Unlock } from 'lucide-react';
 import { Separator } from './ui/separator';
-import { addDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase/non-blocking-updates';
-import { collection, where, query, getDocs, doc, writeBatch } from 'firebase/firestore';
+import { addDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase/non-blocking-updates';
+import { collection, doc } from 'firebase/firestore';
 import { useFirestore, useMemoFirebase } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import Image from 'next/image';
@@ -50,7 +50,6 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
 
   const reportRef = useRef<HTMLDivElement>(null);
   const firestore = useFirestore();
-  const monthlyClosuresCollection = useMemoFirebase(() => collection(firestore, 'monthlyClosures'), [firestore]);
 
   const years = useMemo(() => {
     const transactionYears = allTransactions.map(t => getYear(t.date));
@@ -66,16 +65,16 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
   }));
 
   const { filteredTransactions, capitalInicial, isClosed } = useMemo(() => {
-    const isMonthClosed = monthlyClosures.some(c => c.year === selectedYear && c.month === selectedMonth);
-
+    const currentClosure = monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth);
+    const monthIsClosed = currentClosure?.status === 'closed';
+    
     // If the month is closed, we use the stored data.
-    if (isMonthClosed) {
-      const closure = monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth)!;
+    if (monthIsClosed) {
       // For a closed month, no transactions are shown in the report's detail table,
       // as they are summarized in the category totals.
       return { 
         filteredTransactions: [], 
-        capitalInicial: closure.initialBalance,
+        capitalInicial: currentClosure!.initialBalance,
         isClosed: true 
       };
     }
@@ -119,13 +118,13 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     return { 
       filteredTransactions: transactionsForSelectedMonth, 
       capitalInicial: capitalInicialValue.toNumber(), 
-      isClosed: false 
+      isClosed: false
     };
   }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
 
   const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
+    const closure = monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth && c.status === 'closed');
     // If the month is closed, use the data from the closure document.
-    const closure = monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth);
     if (closure) {
       return {
         totalIncome: closure.totalIncome,
@@ -211,7 +210,6 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     setIsClosingMonth(true);
 
     const closureId = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}`;
-    
     const docRef = doc(firestore, 'monthlyClosures', closureId);
 
     const closureData: Omit<MonthlyClosure, 'id'> = {
@@ -223,6 +221,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       finalBalance: capitalFinal,
       categoryTotals,
       closedAt: new Date().toISOString(),
+      status: 'closed',
     };
 
     try {
@@ -249,7 +248,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     const docRef = doc(firestore, 'monthlyClosures', closureId);
 
     try {
-      deleteDocumentNonBlocking(docRef);
+      updateDocumentNonBlocking(docRef, { status: 'open' });
       toast({
         title: 'Mes Reabierto',
         description: `El mes de ${months[selectedMonth].label} ${selectedYear} ha sido reabierto.`,
@@ -258,7 +257,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
        toast({
         variant: 'destructive',
         title: 'Error al reabrir el mes',
-        description: 'Hubo un problema al eliminar el cierre del mes.',
+        description: 'Hubo un problema al actualizar el estado del mes.',
       });
     } finally {
         setIsReopeningMonth(false);

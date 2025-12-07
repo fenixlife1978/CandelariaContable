@@ -1,3 +1,5 @@
+'use client';
+
 export type Transaction = {
   id: string;
   type: 'income' | 'expense';
@@ -24,7 +26,7 @@ export type Expense = {
 }
 
 export type MonthlyClosure = {
-  id?: string;
+  id: string; // YYYY-MM
   month: number;
   year: number;
   initialBalance: number;
@@ -33,6 +35,7 @@ export type MonthlyClosure = {
   finalBalance: number;
   categoryTotals: Record<string, { income: number; expense: number }>;
   closedAt: string;
+  status: 'open' | 'closed';
 };
 
 export type CompanyProfile = {
@@ -44,5 +47,3 @@ export type CompanyProfile = {
   email?: string;
   logo?: string;
 }
-
-    

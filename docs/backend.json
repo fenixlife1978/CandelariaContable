@@ -153,6 +153,11 @@
           "type": "string",
           "description": "The timestamp when the month was closed.",
           "format": "date-time"
+        },
+        "status": {
+            "type": "string",
+            "description": "The status of the monthly closure.",
+            "enum": ["open", "closed"]
         }
       },
       "required": [
@@ -164,7 +169,8 @@
         "totalExpenses",
         "finalBalance",
         "categoryTotals",
-        "closedAt"
+        "closedAt",
+        "status"
       ]
     },
     "CompanyProfile": {
