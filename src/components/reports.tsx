@@ -68,15 +68,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     return monthlyClosures.find(c => c.year === selectedYear && c.month === selectedMonth);
   }, [monthlyClosures, selectedYear, selectedMonth]);
 
-  const { filteredTransactions, capitalInicial, isClosed } = useMemo(() => {
-    if (selectedClosure?.status === 'closed') {
-      return {
-        filteredTransactions: [],
-        capitalInicial: selectedClosure.initialBalance,
-        isClosed: true,
-      };
-    }
-
+  const { filteredTransactions, capitalInicial } = useMemo(() => {
     const getPreviousMonthFinalBalance = (month: number, year: number): Decimal => {
       const previousMonthDate = subMonths(new Date(year, month), 1);
       const prevYear = getYear(previousMonthDate);
@@ -87,17 +79,15 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         return new Decimal(closure.finalBalance);
       }
 
-      // Base case: if we go back before any transactions exist and there's no closure, start at 0.
-      if (year < 2024 && month === 0) { // Adjust this condition based on your data start date
+      if (year < 2024 && month === 0) { 
           return new Decimal(0);
       }
-
-      // If no closure, we must calculate it recursively
-      const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear);
       
       const transactionsForPrevMonth = allTransactions.filter(t =>
         getMonth(t.date) === prevMonth && getYear(t.date) === prevYear
       );
+
+      const initialCapitalForPrevMonth = getPreviousMonthFinalBalance(prevMonth, prevYear);
 
       const finalBalance = transactionsForPrevMonth.reduce((acc, t) => {
         const amount = new Decimal(t.amount);
@@ -117,9 +107,8 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
     return {
       filteredTransactions: transactionsForSelectedMonth,
       capitalInicial: capitalInicialValue.toNumber(),
-      isClosed: false,
     };
-  }, [allTransactions, selectedMonth, selectedYear, monthlyClosures, selectedClosure]);
+  }, [allTransactions, selectedMonth, selectedYear, monthlyClosures]);
 
   const { totalIncome, totalExpenses, balance, categoryTotals, capitalFinal } = useMemo(() => {
     if (selectedClosure?.status === 'closed') {
@@ -324,7 +313,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
 
         <div className="border bg-background rounded-lg">
           <div ref={reportRef} className="p-8 bg-white text-black">
-            <div className="flex items-start justify-between mb-4">
+            <div className="flex items-start justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden border">
                     {companyProfile?.logo ? (
@@ -339,24 +328,24 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
                 </div>
             </div>
 
-            <h3 className="text-lg font-semibold font-headline mb-6 text-center">
+            <h3 className="text-xl font-semibold font-headline mb-6 text-center">
                 Reporte de {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
             </h3>
             
             <div className="grid grid-cols-2 gap-4 mb-8">
-                <div className="p-4 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+                <div className="p-4 bg-gray-100 rounded-lg border border-gray-200">
                   <p className="text-sm text-gray-600 text-center">Capital Inicial</p>
                   <p className="text-xl font-bold text-center">{formatCurrency(capitalInicial)}</p>
                 </div>
-                <div className="p-4 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+                <div className="p-4 bg-gray-100 rounded-lg border border-gray-200">
                   <p className="text-sm text-gray-600 text-center">Ingresos del Mes</p>
                   <p className="text-xl font-bold text-center text-green-600">{formatCurrency(totalIncome)}</p>
                 </div>
-                <div className="p-4 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+                <div className="p-4 bg-gray-100 rounded-lg border border-gray-200">
                   <p className="text-sm text-gray-600 text-center">Egresos del Mes</p>
                   <p className="text-xl font-bold text-center text-red-600">{formatCurrency(totalExpenses)}</p>
                 </div>
-                <div className="p-4 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+                <div className="p-4 bg-gray-100 rounded-lg border border-gray-200">
                   <p className="text-sm text-gray-600 text-center">Capital Final</p>
                   <p className="text-xl font-bold text-center">{formatCurrency(capitalFinal)}</p>
                 </div>
@@ -370,7 +359,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
             {Object.keys(categoryTotals).length > 0 ? (
                 <div className="grid grid-cols-2 gap-4 mb-6">
                     {Object.entries(categoryTotals).map(([category, totals]) => (
-                        <div key={category} className="p-4 bg-gray-100 rounded-lg shadow-sm border border-gray-200">
+                        <div key={category} className="p-4 bg-gray-100 rounded-lg border border-gray-200">
                             <p className="font-bold text-center mb-2">{category}</p>
                             <div className="flex justify-between text-sm">
                                 <span className="text-gray-600">Ingresos:</span>
@@ -380,7 +369,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
                                 <span className="text-gray-600">Egresos:</span>
                                 <span className="font-medium text-red-600">{formatCurrency(totals.expense)}</span>
                             </div>
-                            <Separator className="my-2 bg-gray-300" />
+                            <Separator className="my-2 bg-gray-200" />
                             <div className="flex justify-between font-bold text-sm">
                                 <span>Balance:</span>
                                 <span>{formatCurrency(new Decimal(totals.income).minus(totals.expense).toNumber())}</span>

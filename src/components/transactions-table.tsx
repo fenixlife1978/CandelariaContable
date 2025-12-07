@@ -49,15 +49,15 @@ export function TransactionsTable({ transactions, onDelete, onUpdate, formatCurr
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const mainComponent = (
-    <div className={isEmbedded ? '' : 'border rounded-md'}>
+    <div className={cn('overflow-x-auto', isEmbedded ? '' : 'border rounded-md')}>
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Fecha</TableHead>
+            <TableHead className="whitespace-nowrap">Fecha</TableHead>
             <TableHead>Descripción</TableHead>
             <TableHead>Categoría</TableHead>
             <TableHead>Tipo</TableHead>
-            <TableHead className="text-right">Monto</TableHead>
+            <TableHead className="text-right whitespace-nowrap">Monto</TableHead>
             {!isEmbedded && <TableHead className="w-[80px] text-right">Acciones</TableHead>}
           </TableRow>
         </TableHeader>
@@ -80,9 +80,8 @@ export function TransactionsTable({ transactions, onDelete, onUpdate, formatCurr
           )}
           {!isLoading && transactions.map((transaction) => (
             <TableRow key={transaction.id}>
-              <TableCell className="hidden md:table-cell">{format(transaction.date, 'dd MMM, yyyy', { locale: es })}</TableCell>
-               <TableCell className="md:hidden table-cell">{format(transaction.date, 'dd/MM/yy', { locale: es })}</TableCell>
-              <TableCell className="font-medium max-w-[150px] truncate">{transaction.description}</TableCell>
+              <TableCell className="whitespace-nowrap">{format(transaction.date, 'dd MMM, yyyy', { locale: es })}</TableCell>
+              <TableCell className="font-medium max-w-xs whitespace-normal break-words">{transaction.description}</TableCell>
               <TableCell>{transaction.category}</TableCell>
               <TableCell>
                 <Badge variant={transaction.type === 'income' ? 'default' : 'secondary'} className={cn(transaction.type === 'income' && 'bg-primary')}>
@@ -90,7 +89,7 @@ export function TransactionsTable({ transactions, onDelete, onUpdate, formatCurr
                 </Badge>
               </TableCell>
               <TableCell
-                className={cn("text-right font-medium", transaction.type === 'expense' && 'text-red-600')}
+                className={cn("text-right font-medium whitespace-nowrap", transaction.type === 'expense' && 'text-red-600')}
               >
                 {transaction.type === 'income' ? '+' : '-'}{formatCurrency(transaction.amount)}
               </TableCell>
