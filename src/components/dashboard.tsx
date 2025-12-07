@@ -152,7 +152,7 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
     <div className="container mx-auto p-4 sm:p-6 lg:p-8 space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h2 className="text-3xl font-bold tracking-tight font-headline">Panel de Control</h2>
-        <AiSummaryModal incomes={incomesForSummary} expenses={expensesForSummary} capital={capital} />
+        <AiSummaryModal incomes={incomesForSummary} expenses={expensesForSummary} capital={capital} companyProfile={companyProfile} />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
