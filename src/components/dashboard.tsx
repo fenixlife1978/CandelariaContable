@@ -250,6 +250,7 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
             allTransactions={transactions}
             monthlyClosures={monthlyClosuresData || []}
             formatCurrency={formatCurrency}
+            companyProfile={companyProfile}
           />
         </TabsContent>
         <TabsContent value="configuration" className="mt-6">
