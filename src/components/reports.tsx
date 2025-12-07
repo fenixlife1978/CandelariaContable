@@ -145,9 +145,18 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       acc[key] = { income: value.income.toNumber(), expense: value.expense.toNumber() };
       return acc;
     }, {} as Record<string, { income: number; expense: number }>);
-
-    const capitalInicialValue = new Decimal(capitalInicial);
-    const capitalFinalValue = capitalInicialValue.plus(incomeValue).minus(expensesValue);
+    
+    // Chronological calculation as requested
+    const sortedTransactions = [...filteredTransactions].sort((a, b) => a.date.getTime() - b.date.getTime());
+    
+    const capitalFinalValue = sortedTransactions.reduce((currentBalance, transaction) => {
+        const amount = new Decimal(transaction.amount);
+        if (transaction.type === 'income') {
+            return currentBalance.plus(amount);
+        } else {
+            return currentBalance.minus(amount);
+        }
+    }, new Decimal(capitalInicial));
 
     return {
       totalIncome: incomeValue.toNumber(),
