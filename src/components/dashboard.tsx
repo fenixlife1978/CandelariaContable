@@ -9,7 +9,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { TrendingUp, TrendingDown, Scale, Settings, Search, DollarSign } from 'lucide-react';
+import { TrendingUp, TrendingDown, Scale, Settings, Search, DollarSign, BookCopy } from 'lucide-react';
 import { TransactionForm } from './transaction-form';
 import { TransactionsTable } from './transactions-table';
 import { AiSummaryModal } from './ai-summary-modal';
@@ -22,6 +22,7 @@ import { Configuration } from './configuration';
 import Decimal from 'decimal.js';
 import { getAuth } from 'firebase/auth';
 import { TransactionQuery } from './transaction-query';
+import { ConsolidatedReport } from './consolidated-report';
 
 type DashboardProps = {
   companyProfile: CompanyProfile | null;
@@ -206,6 +207,10 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
             Consultas
           </TabsTrigger>
           <TabsTrigger value="reports">Reportes</TabsTrigger>
+          <TabsTrigger value="consolidated-report">
+            <BookCopy className="mr-2 h-4 w-4" />
+            Reporte Consolidado
+          </TabsTrigger>
           <TabsTrigger value="configuration">
             <Settings className="mr-2 h-4 w-4" />
             Configuración
@@ -238,6 +243,13 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
             formatCurrency={formatCurrency} 
             isLoading={isLoading} 
             companyProfile={companyProfile}
+          />
+        </TabsContent>
+        <TabsContent value="consolidated-report" className="mt-6">
+          <ConsolidatedReport
+            allTransactions={transactions}
+            monthlyClosures={monthlyClosuresData || []}
+            formatCurrency={formatCurrency}
           />
         </TabsContent>
         <TabsContent value="configuration" className="mt-6">
