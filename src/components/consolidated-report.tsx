@@ -170,13 +170,31 @@ export function ConsolidatedReport({
         backgroundColor: '#ffffff',
       });
       const imgData = canvas.toDataURL('image/png');
+      
       const pdf = new jsPDF({
         orientation: 'landscape',
-        unit: 'px',
-        format: [canvas.width, canvas.height],
+        unit: 'pt',
+        format: 'a4',
       });
 
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const canvasWidth = canvas.width;
+      const canvasHeight = canvas.height;
+      const ratio = canvasWidth / canvasHeight;
+
+      let newCanvasWidth = pdfWidth;
+      let newCanvasHeight = newCanvasWidth / ratio;
+      
+      if (newCanvasHeight > pdfHeight) {
+        newCanvasHeight = pdfHeight;
+        newCanvasWidth = newCanvasHeight * ratio;
+      }
+
+      const x = (pdfWidth - newCanvasWidth) / 2;
+      const y = (pdfHeight - newCanvasHeight) / 2;
+
+      pdf.addImage(imgData, 'PNG', x, y, newCanvasWidth, newCanvasHeight);
       pdf.save(`reporte-consolidado-${selectedYear}.pdf`);
     } catch (error) {
       console.error("Error al generar el PDF:", error);
@@ -223,8 +241,8 @@ export function ConsolidatedReport({
             </Button>
         </div>
 
-        <div className="overflow-x-auto border rounded-lg" ref={reportRef}>
-          <div className="p-8 bg-white text-black">
+        <div className="overflow-x-auto border rounded-lg">
+          <div ref={reportRef} className="p-8 bg-white text-black">
             <div className="flex items-start justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden border">
