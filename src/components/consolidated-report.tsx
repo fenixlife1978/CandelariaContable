@@ -168,6 +168,8 @@ export function ConsolidatedReport({
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
+        windowWidth: reportRef.current.scrollWidth,
+        windowHeight: reportRef.current.scrollHeight
       });
       const imgData = canvas.toDataURL('image/png');
       
@@ -179,22 +181,21 @@ export function ConsolidatedReport({
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const canvasWidth = canvas.width;
-      const canvasHeight = canvas.height;
-      const ratio = canvasWidth / canvasHeight;
-
-      let newCanvasWidth = pdfWidth;
-      let newCanvasHeight = newCanvasWidth / ratio;
       
-      if (newCanvasHeight > pdfHeight) {
-        newCanvasHeight = pdfHeight;
-        newCanvasWidth = newCanvasHeight * ratio;
+      const imgProps= pdf.getImageProperties(imgData);
+      const imgWidth = imgProps.width;
+      const imgHeight = imgProps.height;
+      
+      const ratio = imgWidth / imgHeight;
+      let finalImgWidth = pdfWidth;
+      let finalImgHeight = pdfWidth / ratio;
+
+      if (finalImgHeight > pdfHeight) {
+          finalImgHeight = pdfHeight;
+          finalImgWidth = pdfHeight * ratio;
       }
 
-      const x = (pdfWidth - newCanvasWidth) / 2;
-      const y = (pdfHeight - newCanvasHeight) / 2;
-
-      pdf.addImage(imgData, 'PNG', x, y, newCanvasWidth, newCanvasHeight);
+      pdf.addImage(imgData, 'PNG', 0, 0, finalImgWidth, finalImgHeight);
       pdf.save(`reporte-consolidado-${selectedYear}.pdf`);
     } catch (error) {
       console.error("Error al generar el PDF:", error);
@@ -242,7 +243,7 @@ export function ConsolidatedReport({
         </div>
 
         <div className="overflow-x-auto border rounded-lg">
-          <div ref={reportRef} className="p-8 bg-white text-black">
+          <div ref={reportRef} className="p-8 bg-white text-black min-w-max">
             <div className="flex items-start justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden border">
