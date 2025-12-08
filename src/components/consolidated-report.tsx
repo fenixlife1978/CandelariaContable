@@ -47,7 +47,7 @@ const CATEGORY_COLUMNS: string[] = [
   "Fiscalía",
   "Capital Recuperado",
   "Intereses Ganados",
-  "Préstamos Candelaria",
+  "Prestamos Candelaria",
   "Préstamos Socios",
   "Compra de Divisas",
   "Gastos de Divisas",
