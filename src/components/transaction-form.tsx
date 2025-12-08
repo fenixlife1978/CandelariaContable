@@ -40,7 +40,7 @@ const transactionCategories = [
   "Capital Recuperado",
   "Intereses Ganados",
   "Préstamos Socios",
-  "Prestamos Candelaria",
+  "Préstamos Candelaria",
   "Capital Inicial",
   "Gastos Extraordinarios",
   "Egresos Extraordinarios",
@@ -52,7 +52,7 @@ const presetDescriptions = [
   "Abono o Recuperación de Capital",
   "Intereses Cobrados",
   "Prestamos del Mes / Socios",
-  "Prestamos / Candelaria",
+  "Préstamos / Candelaria",
   "Compra de Divisas",
   "Gastos de Divisas",
 ];
