@@ -182,7 +182,7 @@ export function ConsolidatedReport({
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
-      const imgProps= pdf.getImageProperties(imgData);
+      const imgProps = pdf.getImageProperties(imgData);
       const imgWidth = imgProps.width;
       const imgHeight = imgProps.height;
       
@@ -194,8 +194,11 @@ export function ConsolidatedReport({
           finalImgHeight = pdfHeight;
           finalImgWidth = pdfHeight * ratio;
       }
+      
+      const x = (pdfWidth - finalImgWidth) / 2;
+      const y = (pdfHeight - finalImgHeight) / 2;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, finalImgWidth, finalImgHeight);
+      pdf.addImage(imgData, 'PNG', x, y, finalImgWidth, finalImgHeight);
       pdf.save(`reporte-consolidado-${selectedYear}.pdf`);
     } catch (error) {
       console.error("Error al generar el PDF:", error);
