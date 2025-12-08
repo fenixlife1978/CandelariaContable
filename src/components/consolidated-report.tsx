@@ -188,12 +188,12 @@ export function ConsolidatedReport({
       const imgHeight = imgProps.height;
       
       const ratio = imgWidth / imgHeight;
-      let finalImgWidth = pdfWidth;
-      let finalImgHeight = pdfWidth / ratio;
+      let finalImgWidth = pdfWidth - 40; // Margen
+      let finalImgHeight = finalImgWidth / ratio;
 
-      if (finalImgHeight > pdfHeight) {
-          finalImgHeight = pdfHeight;
-          finalImgWidth = pdfHeight * ratio;
+      if (finalImgHeight > pdfHeight - 40) {
+          finalImgHeight = pdfHeight - 40;
+          finalImgWidth = finalImgHeight * ratio;
       }
       
       const x = (pdfWidth - finalImgWidth) / 2;
@@ -222,7 +222,7 @@ export function ConsolidatedReport({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1 max-w-xs">
             <Select
               value={String(selectedYear)}
@@ -247,7 +247,7 @@ export function ConsolidatedReport({
         </div>
 
         <div className="overflow-x-auto border rounded-lg">
-          <div ref={reportRef} className="p-8 bg-white text-black min-w-max">
+          <div ref={reportRef} className="p-4 sm:p-8 bg-white text-black min-w-max">
             <div className="flex items-start justify-between mb-8">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden border">

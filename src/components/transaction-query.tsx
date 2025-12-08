@@ -83,10 +83,17 @@ export function TransactionQuery({ allTransactions, onDelete, onUpdate, formatCu
       const canvasWidth = canvas.width;
       const canvasHeight = canvas.height;
       const ratio = canvasWidth / canvasHeight;
-      const width = pdfWidth;
-      const height = width / ratio;
+      let width = pdfWidth;
+      let height = width / ratio;
+      if (height > pdfHeight) {
+        height = pdfHeight;
+        width = height * ratio;
+      }
 
-      pdf.addImage(imgData, 'PNG', 0, 0, width, height > pdfHeight ? pdfHeight : height);
+      const x = (pdfWidth - width) / 2;
+      const y = (pdfHeight - height) / 2;
+
+      pdf.addImage(imgData, 'PNG', x, y, width, height);
       pdf.save(`consulta-${months[selectedMonth].label}-${selectedYear}.pdf`);
     } catch(error) {
       console.error("Error al generar el PDF:", error)
@@ -112,7 +119,7 @@ export function TransactionQuery({ allTransactions, onDelete, onUpdate, formatCu
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
           <div className="flex-1">
             <Select
               value={String(selectedMonth)}
@@ -153,8 +160,8 @@ export function TransactionQuery({ allTransactions, onDelete, onUpdate, formatCu
           </Button>
         </div>
 
-        <div className="overflow-hidden">
-          <div ref={queryReportRef} className="bg-white text-black p-4">
+        <div className="overflow-hidden border rounded-lg">
+          <div ref={queryReportRef} className="bg-white text-black p-4 sm:p-8">
             <div className="flex items-start justify-between mb-4">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden border">

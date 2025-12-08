@@ -184,10 +184,24 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'px',
-        format: [canvas.width, canvas.height],
+        format: 'a4'
       });
 
-      pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = imgWidth / imgHeight;
+      let newWidth = pdfWidth;
+      let newHeight = newWidth / ratio;
+      if (newHeight > pdfHeight) {
+        newHeight = pdfHeight;
+        newWidth = newHeight * ratio;
+      }
+      const x = (pdfWidth - newWidth) / 2;
+      const y = (pdfHeight - newHeight) / 2;
+
+      pdf.addImage(imgData, 'PNG', x, y, newWidth, newHeight);
       pdf.save(`reporte-${months[selectedMonth].label}-${selectedYear}.pdf`);
     } catch(error) {
       console.error("Error al generar el PDF:", error)
@@ -305,7 +319,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
               </SelectContent>
             </Select>
           </div>
-          <div className='flex gap-2'>
+          <div className='flex gap-2 flex-wrap'>
             <Button onClick={handleCloseMonth} disabled={isClosingMonth || monthIsClosed} variant="secondary">
                 <Lock className="mr-2 h-4 w-4" />
                 {isClosingMonth ? 'Cerrando...' : 'Cierre del Mes'}
@@ -322,7 +336,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
         </div>
 
         <div className="border bg-background rounded-lg p-4">
-          <div ref={reportRef} className="p-8 bg-white text-black">
+          <div ref={reportRef} className="p-4 sm:p-8 bg-white text-black">
              <div className="flex items-start justify-between mb-8">
                 <div className="flex items-center gap-3">
                   <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden border">
@@ -338,7 +352,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
                 </div>
             </div>
 
-            <h3 className="text-xl font-semibold font-headline mb-6 text-center">
+            <h3 className="text-xl font-semibold font-headline mb-6 text-center capitalize">
                 Reporte Financiero del Mes de {months.find(m => m.value === selectedMonth)?.label} {selectedYear}
             </h3>
             
@@ -367,7 +381,7 @@ export function Reports({ allTransactions, monthlyClosures, formatCurrency, isLo
                 Resumen por Categoría
             </h4>
             {Object.keys(categoryTotals).length > 0 ? (
-                <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                     {Object.entries(categoryTotals).map(([category, totals]) => (
                         <div key={category} className="p-4 bg-gray-100 rounded-lg border border-gray-200">
                             <p className="font-bold text-center mb-2">{category}</p>

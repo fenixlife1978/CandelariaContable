@@ -31,11 +31,11 @@ export function Header({ companyProfile }: HeaderProps) {
                 <Banknote className="h-6 w-6 text-primary-foreground" />
               )}
             </div>
-            <h1 className="text-2xl font-bold text-foreground font-headline">
+            <h1 className="text-lg sm:text-2xl font-bold text-foreground font-headline truncate">
               {companyProfile?.name || 'Contabilidad LoanStar'}
             </h1>
           </div>
-          <Button variant="ghost" onClick={handleSignOut}>
+          <Button variant="ghost" onClick={handleSignOut} size="sm" className="whitespace-nowrap">
             <LogOut className="mr-2 h-4 w-4" />
             Cerrar Sesión
           </Button>

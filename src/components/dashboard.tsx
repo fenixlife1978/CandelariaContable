@@ -83,10 +83,17 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
     
     const compraDivisas = transactions
         .filter(t => t.category === 'Compra de Divisas')
-        .reduce((sum, t) => sum.plus(new Decimal(t.amount)), new Decimal(0));
+        .reduce((sum, t) => {
+          const amount = new Decimal(t.amount);
+          return t.type === 'income' ? sum.plus(amount) : sum.minus(amount);
+        }, new Decimal(0));
+
     const gastosDivisas = transactions
         .filter(t => t.category === 'Gastos de Divisas')
-        .reduce((sum, t) => sum.plus(new Decimal(t.amount)), new Decimal(0));
+        .reduce((sum, t) => {
+           const amount = new Decimal(t.amount);
+          return t.type === 'income' ? sum.plus(amount) : sum.minus(amount);
+        }, new Decimal(0));
 
     const divisasFlowValue = compraDivisas.minus(gastosDivisas);
 
@@ -200,7 +207,7 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
       </div>
 
       <Tabs defaultValue="transactions">
-        <TabsList>
+        <TabsList className="overflow-x-auto whitespace-nowrap h-auto justify-start">
           <TabsTrigger value="transactions">Transacciones</TabsTrigger>
           <TabsTrigger value="query">
             <Search className="mr-2 h-4 w-4" />

@@ -128,8 +128,8 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden">
+      <div className="flex flex-col sm:flex-row items-center gap-3 mb-6 text-center sm:text-left">
+        <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center overflow-hidden shrink-0">
           {companyProfile?.logo ? (
             <Image
               src={companyProfile.logo}
@@ -142,7 +142,7 @@ export default function LoginPage() {
             <Banknote className="h-7 w-7 text-primary-foreground" />
           )}
         </div>
-        <h1 className="text-2xl font-bold text-foreground font-headline text-center">
+        <h1 className="text-xl sm:text-2xl font-bold text-foreground font-headline">
           Contabilidad Asoc. Coop. de Transp. La Candelaria
         </h1>
       </div>
