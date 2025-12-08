@@ -43,13 +43,14 @@ type ConsolidatedReportProps = {
   companyProfile: CompanyProfile | null;
 };
 
-const CATEGORY_COLUMNS: (keyof typeof reportData.categoryTotals)[] = [
+const CATEGORY_COLUMNS: string[] = [
   "Fiscalía",
   "Capital Recuperado",
   "Intereses Ganados",
   "Préstamos Candelaria",
   "Préstamos Socios",
-  "Divisas",
+  "Compra de Divisas",
+  "Gastos de Divisas",
 ];
 
 export function ConsolidatedReport({
@@ -126,7 +127,7 @@ export function ConsolidatedReport({
       if (closure) {
         finalBalance = new Decimal(closure.finalBalance);
         Object.entries(closure.categoryTotals).forEach(([category, totals]) => {
-          if (CATEGORY_COLUMNS.includes(category as any)) {
+          if (CATEGORY_COLUMNS.includes(category)) {
             categoryTotals[category] = new Decimal(totals.income).minus(totals.expense);
           }
         });
@@ -136,7 +137,7 @@ export function ConsolidatedReport({
         );
 
         transactionsForMonth.forEach(t => {
-            if (CATEGORY_COLUMNS.includes(t.category as any)) {
+            if (CATEGORY_COLUMNS.includes(t.category)) {
                 const amount = new Decimal(t.amount);
                 const netChange = t.type === 'income' ? amount : amount.negated();
                 categoryTotals[t.category] = (categoryTotals[t.category] || new Decimal(0)).plus(netChange);

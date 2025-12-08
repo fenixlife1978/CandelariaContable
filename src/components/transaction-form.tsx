@@ -42,9 +42,9 @@ const transactionCategories = [
   "Préstamos Socios",
   "Préstamos Candelaria",
   "Capital Inicial",
-  "Gastos Extraordinarios",
   "Egresos Extraordinarios",
-  "Divisas",
+  "Compra de Divisas",
+  "Gastos de Divisas",
 ];
 
 const presetDescriptions = [
