@@ -52,6 +52,7 @@ const CATEGORY_COLUMNS: string[] = [
   "Compra de Divisas",
   "Gastos de Divisas",
   "Egresos Extraordinarios",
+  "Otros Egresos",
 ];
 
 export function ConsolidatedReport({

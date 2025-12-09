@@ -45,6 +45,7 @@ const transactionCategories = [
   "Compra de Divisas",
   "Gastos de Divisas",
   "Egresos Extraordinarios",
+  "Otros Egresos",
 ];
 
 const presetDescriptions = [
