@@ -90,6 +90,7 @@ export function ConsolidatedReport({
         return new Decimal(closure.finalBalance);
       }
 
+      // Base case for recursion, to prevent infinite loops before any transactions exist.
       const firstTransactionYear = Math.min(...allTransactions.map(t => getYear(t.date)), new Date().getFullYear());
       if (year < firstTransactionYear || (year === firstTransactionYear && month === 0)) {
          return new Decimal(0);
@@ -129,7 +130,9 @@ export function ConsolidatedReport({
         finalBalance = new Decimal(closure.finalBalance);
         Object.entries(closure.categoryTotals).forEach(([category, totals]) => {
           if (CATEGORY_COLUMNS.includes(category)) {
-            categoryTotals[category] = new Decimal(totals.income).minus(totals.expense);
+            const income = new Decimal(totals.income);
+            const expense = new Decimal(totals.expense);
+            categoryTotals[category] = income.minus(expense);
           }
         });
       } else {
