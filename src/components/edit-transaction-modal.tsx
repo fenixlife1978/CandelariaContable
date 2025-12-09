@@ -43,7 +43,6 @@ const transactionCategories = [
   "Capital Inicial",
   "Compra de Divisas",
   "Gastos de Divisas",
-  "Egresos Extraordinarios",
   "Otros Egresos",
 ];
 
@@ -303,6 +302,7 @@ export function EditTransactionModal({ transaction, onUpdate, isOpen, onClose }:
                                 <SelectContent>
                                 {years.map((year) => (
                                     <SelectItem key={year} value={String(year)}>{year}</SelectItem>
+
                                 ))}
                                 </SelectContent>
                             </Select>
