@@ -78,28 +78,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
     try {
       await initiateEmailSignIn(auth, values.email, values.password);
-
-      // 🔥 Refrescar token y verificar claims inmediatamente después del login
-      const currentUser = auth.currentUser;
-      if (currentUser) {
-        const idTokenResult = await currentUser.getIdTokenResult(true); // fuerza refresco
-        console.log('Claims:', idTokenResult.claims);
-
-        if (idTokenResult.claims.admin) {
-          console.log('✅ Usuario es admin');
-          // El useEffect manejará la redirección
-        } else {
-          console.log('❌ Usuario NO es admin');
-          toast({
-            variant: 'destructive',
-            title: 'Acceso restringido',
-            description:
-              'Tu cuenta no tiene permisos de administrador. Contacta al administrador del sistema.',
-          });
-          setIsSubmitting(false);
-          return;
-        }
-      }
+      // El useEffect se encargará de la redirección
     } catch (error: any) {
       let errorMessage = 'Ocurrió un error inesperado.';
       if (
@@ -149,7 +128,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">
-            Inicio de Sesión de Administrador
+            Inicio de Sesión
           </CardTitle>
           <CardDescription>
             Introduce tus credenciales para acceder al panel de control.
@@ -166,7 +145,7 @@ export default function LoginPage() {
                     <FormLabel>Correo Electrónico</FormLabel>
                     <FormControl>
                       <Input
-                        placeholder="admin@ejemplo.com"
+                        placeholder="usuario@ejemplo.com"
                         {...field}
                         type="email"
                       />

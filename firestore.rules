@@ -1,27 +1,24 @@
 /**
- * This ruleset implements a role-based access control model where only
- * administrators have write privileges.
+ * This ruleset implements a model where any authenticated user has full
+ * read and write access to the data.
  *
  * Core Philosophy:
- * The security model grants universal read access to authenticated users, but
- * restricts all data modification (create, update, delete) to users who have
- * a custom claim `admin: true` on their authentication token. Unauthenticated
- * access is fully denied, except for reading the company profile.
+ * The security model grants universal read and write access to any user who
+ * is authenticated. Unauthenticated access is fully denied, except for
+ * reading the company profile for display on the login page.
  *
  * Data Structure:
  * The data is organized into flat, top-level collections. There is no
- * user-specific nesting, as the access control is based on roles, not ownership.
+ * user-specific nesting, as access control is not based on data ownership.
  *
  * Key Security Decisions:
- * - Admin-Only Writes: Any user attempting to create, update, or delete a document
- *   in any collection must be an administrator.
- * - Authenticated Reads: Any authenticated user can read data from the main
- *   collections. The company profile is publicly readable for the login page.
- * - Role-Based Control: The primary check for write operations is `isAdmin()`,
- *   which inspects the custom claims on the user's token.
+ * - Authenticated Writes: Any authenticated user can create, update, or
+ *   delete a document in any collection.
+ * - Authenticated Reads: Any authenticated user can read data from all
+ *   collections. The company profile is publicly readable.
  *
- * WARNING: This model assumes that custom claims are being securely set and managed
- * via a trusted server environment (e.g., Cloud Functions).
+ * WARNING: This model is suitable for applications where all authenticated
+ * users are considered trusted administrators of the data.
  *
  * Force redeploy: 2024-08-01 12:00:00 UTC
  */
@@ -40,61 +37,49 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    /**
-     * Checks if the authenticated user has the 'admin' custom claim.
-     * This is the primary gate for all write operations.
-     */
-    function isAdmin() {
-      return isSignedIn() && request.auth.token.admin == true;
-    }
-
     // ----------------------------------------------------------------------
     // Collection Rules
     // ----------------------------------------------------------------------
 
     /**
-     * @description Allows authenticated users to read, but only admins to write.
+     * @description Allows any authenticated user to read and write.
      * @path /incomes/{incomeId}
      */
     match /incomes/{incomeId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow read, write: if isSignedIn();
     }
 
     /**
-     * @description Allows authenticated users to read, but only admins to write.
+     * @description Allows any authenticated user to read and write.
      * @path /expenses/{expenseId}
      */
     match /expenses/{expenseId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow read, write: if isSignedIn();
     }
 
     /**
-     * @description Allows authenticated users to read, but only admins to write.
+     * @description Allows any authenticated user to read and write.
      * @path /loanSummaries/{loanSummaryId}
      */
     match /loanSummaries/{loanSummaryId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+      allow read, write: if isSignedIn();
     }
 
     /**
-     * @description Allows authenticated users to read, but only admins to write.
+     * @description Allows any authenticated user to read and write.
      * @path /monthlyClosures/{closureId}
      */
     match /monthlyClosures/{closureId} {
-        allow read: if isSignedIn();
-        allow write: if isAdmin();
+        allow read, write: if isSignedIn();
     }
     
     /**
-     * @description Allows any user to read the company profile, but only admins to write.
+     * @description Allows any user to read the company profile, but only authenticated users to write.
      * @path /companyProfile/{profileId}
      */
     match /companyProfile/{profileId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isSignedIn();
     }
   }
 }

@@ -20,7 +20,6 @@ import { collection, doc } from 'firebase/firestore';
 import { Reports } from './reports';
 import { Configuration } from './configuration';
 import Decimal from 'decimal.js';
-import { getAuth } from 'firebase/auth';
 import { TransactionQuery } from './transaction-query';
 import { ConsolidatedReport } from './consolidated-report';
 
@@ -31,24 +30,6 @@ type DashboardProps = {
 export default function Dashboard({ companyProfile }: DashboardProps) {
   const firestore = useFirestore();
   const { user } = useUser();
-
-  useEffect(() => {
-    if (user) {
-      // Forzar refresco del token para obtener los claims nuevos
-      user.getIdToken(true).then((token) => {
-        console.log("Nuevo token con claims:", token);
-      });
-
-      user.getIdTokenResult(true).then((idTokenResult) => {
-        console.log("Claims:", idTokenResult.claims);
-        if (idTokenResult.claims.admin) {
-          console.log("✅ Usuario es admin");
-        } else {
-          console.log("❌ Usuario NO es admin");
-        }
-      });
-    }
-  }, [user]);
 
   const incomesCollection = useMemoFirebase(() => collection(firestore, 'incomes'), [firestore]);
   const expensesCollection = useMemoFirebase(() => collection(firestore, 'expenses'), [firestore]);
