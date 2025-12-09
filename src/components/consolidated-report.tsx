@@ -51,7 +51,6 @@ const CATEGORY_COLUMNS: string[] = [
   "Préstamos Socios",
   "Compra de Divisas",
   "Gastos de Divisas",
-  "Egresos Extraordinarios",
   "Otros Egresos",
 ];
 
