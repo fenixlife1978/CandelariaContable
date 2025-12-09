@@ -81,21 +81,19 @@ export default function Dashboard({ companyProfile }: DashboardProps) {
         new Decimal(0)
     );
     
-    const compraDivisas = transactions
-        .filter(t => t.category === 'Compra de Divisas')
+    const calculateCategoryBalance = (categoryName: string) => {
+      return transactions
+        .filter(t => t.category === categoryName)
         .reduce((sum, t) => {
           const amount = new Decimal(t.amount);
           return t.type === 'income' ? sum.plus(amount) : sum.minus(amount);
         }, new Decimal(0));
+    };
 
-    const gastosDivisas = transactions
-        .filter(t => t.category === 'Gastos de Divisas')
-        .reduce((sum, t) => {
-           const amount = new Decimal(t.amount);
-          return t.type === 'income' ? sum.plus(amount) : sum.minus(amount);
-        }, new Decimal(0));
+    const compraDivisasBalance = calculateCategoryBalance('Compra de Divisas');
+    const gastosDivisasBalance = calculateCategoryBalance('Gastos de Divisas');
 
-    const divisasFlowValue = compraDivisas.minus(gastosDivisas);
+    const divisasFlowValue = compraDivisasBalance.plus(gastosDivisasBalance);
 
     const capitalValue = totalIncomeValue.minus(totalExpensesValue);
 
