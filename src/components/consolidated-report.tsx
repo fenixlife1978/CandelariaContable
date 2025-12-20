@@ -277,7 +277,19 @@ export function ConsolidatedReport({
                 <TableRow>
                   <TableHead className="font-bold sticky left-0 bg-white z-10 whitespace-nowrap">Mes</TableHead>
                   <TableHead className="text-right font-bold whitespace-nowrap">Saldo Inicial</TableHead>
-                  {CATEGORY_COLUMNS.map(col => <TableHead key={col} className="text-right whitespace-nowrap">{col}</TableHead>)}
+                  {CATEGORY_COLUMNS.map(col => {
+                    if (col === "Reintegro Diario Candelaria") {
+                      return (
+                        <TableHead key={col} className="text-right">
+                          <div className="flex flex-col items-center">
+                            <span>Reintegro Diario</span>
+                            <span>Candelaria</span>
+                          </div>
+                        </TableHead>
+                      )
+                    }
+                    return <TableHead key={col} className="text-right whitespace-nowrap">{col}</TableHead>
+                  })}
                   <TableHead className="text-right font-bold whitespace-nowrap">Saldo Final</TableHead>
                 </TableRow>
               </TableHeader>
