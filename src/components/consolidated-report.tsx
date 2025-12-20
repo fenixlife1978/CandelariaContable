@@ -52,6 +52,7 @@ const CATEGORY_COLUMNS: string[] = [
   "Compra de Divisas",
   "Gastos de Divisas",
   "Otros Egresos",
+  "Reintegro Diario Candelaria",
 ];
 
 export function ConsolidatedReport({

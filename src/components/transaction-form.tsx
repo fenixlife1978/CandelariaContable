@@ -45,6 +45,7 @@ const transactionCategories = [
   "Compra de Divisas",
   "Gastos de Divisas",
   "Otros Egresos",
+  "Reintegro Diario Candelaria",
 ];
 
 const presetDescriptions = [
@@ -55,6 +56,7 @@ const presetDescriptions = [
   "Prestamos Candelaria",
   "Compra de Divisas",
   "Gastos de Divisas",
+  "Reintegro Diario Candelaria",
 ];
 
 
